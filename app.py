@@ -1,26 +1,31 @@
 import streamlit as st
 
+# --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(
     page_title="Portal Pak Iwan",
     page_icon="👋",
     layout="wide",
-    initial_sidebar_state="expanded"  # <--- INI TAMBAHAN PENTINGNYA
+    initial_sidebar_state="expanded"
 )
 
-
+# --- 2. JUDUL ---
 st.title("👨‍🏫 Portal Iwan Gunawan, PhD")
 st.markdown("---")
 
+# --- 3. MEMBAGI KOLOM (FOTO & TEXT) ---
 col1, col2 = st.columns([1, 2])
 
+# --- BAGIAN FOTO (COL 1) ---
+# Perhatikan: Baris st.image HARUS menjorok ke dalam
 with col1:
-    # Ganti dengan link foto Bapak jika ada
-    
+    st.image("https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png", width=200)
 
+# --- BAGIAN TEKS (COL 2) ---
+# Perhatikan: Baris st.write HARUS menjorok ke dalam
 with col2:
     st.write("""
     ### Sepercik Harapan
-   Affiliasi:
+    **Afiliasi:**
     * **Universitas Khairun**, Indonesia
     * **Universiti Malaysia Pahang Al-Sultan Abdullah**
 
@@ -30,25 +35,14 @@ with col2:
     3.  Drawing 3D
     """)
 
+# --- 4. INFO NAVIGASI DI BAWAH ---
 st.info("""
-**👈 SILAKAN LIHAT MENU DI KIRI LAYAR**
+**👈 MENU NAVIGASI ADA DI KIRI**
 
-Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) untuk membuka:
-1.  **📄 Konverter**: Untuk mengubah file LaTeX ke Word.
-2.  **📚 List Jurnal**: Untuk melihat daftar referensi jurnal.
+Silakan pilih menu di sidebar samping untuk:
+1.  **📄 Konverter**: Mengubah LaTeX ke Word.
+2.  **📚 List Jurnal**: Melihat daftar referensi.
+3.  **🏷️ Barcode**: Membuat barcode alat.
 """)
 
-st.write("📧 Kontak: infak")
-
-
-
-
-
-
-
-
-
-
-
-
-
+st.write("📧 Kontak: iwan99khairun@gmail.com")
