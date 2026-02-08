@@ -1,99 +1,136 @@
 import streamlit as st
 import pypandoc
 import os
-import pandas as pd
 
-# --- 1. PENGATURAN AWAL ---
-PASSWORD_RAHASIA = "123123"  # Password
+# --- 1. PENGATURAN PASSWORD ---
+PASSWORD_RAHASIA = "123123"  # Silakan ganti password ini sesuai keinginan Bapak
 
-st.set_page_config(page_title="Portal Pak Iwan", page_icon="📝", layout="wide")
+st.set_page_config(page_title="Konverter Pak Iwan", page_icon="📝")
 
-# Inisialisasi Login
+# Inisialisasi status login
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-
-# --- 2. SIDEBAR NAVIGASI ---
+# --- MENAMBAH SIDEBAR DI SISI KIRI ---
 with st.sidebar:
-    st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
-    st.title("Menu Utama")
-    
-    # Navigasi Halaman
-    halaman = st.radio("Pilih Layanan:", 
-        ["🏠 Profil Dosen", "📄 Konverter LaTeX", "📚 Materi & Riset"]
-    )
-    
+    # --- MENAMBAH LOGO DI ATAS SIDEBAR ---
+    # Ganti link di bawah dengan link gambar logo Bapak atau kampus
+    st.sidebar.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
+
+with st.sidebar:
+    st.title("Menu Navigasi")
+    # ... kode sidebar lainnya ...
+   
     st.markdown("---")
+    
+    # Menambahkan Link Teks
     st.write("🔗 **Link Penting:**")
-    st.markdown("[Masjid Al Muttaqin](https://masjid-almuttaqin-gamplong1.blogspot.com/)")
+    st.markdown("[Masjid Al Muttaqin](https://masjid-almuttaqin-gamplong1.blogspot.com/)") # Ganti dengan link Bapak
     st.markdown("[Universiti Malaysia Pahang](https://www.umpsa.edu.my)")
     
     st.markdown("---")
     st.write("📧 **Kontak:**")
-    st.write("iwan99khairun@gmail.com")
+    st.write("iwan99khairun@gmail.com") # Sesuaikan email Bapak
     
-    if st.session_state["authenticated"]:
-        st.markdown("---")
-        if st.button("Keluar / Logout"):
-            st.session_state["authenticated"] = False
+    st.markdown("---")
+    st.info("Alat ini digunakan untuk membantu mahasiswa mengonversi tugas LaTeX ke format Word (.docx).")
+
+# --- 2. TAMPILAN HALAMAN LOGIN ---
+if not st.session_state["authenticated"]:
+    st.title("🔐 Akses Terbatas")
+    st.markdown("### Alat Konversi LaTeX - Docx")
+    st.markdown("### by Iwan Gunawan, PhD")
+    st.markdown("### Universiti Malaysia Al sultan Abdullah")
+    input_password = st.text_input("Masukkan Password:", type="password")
+    
+    if st.button("Masuk"):
+        if input_password == PASSWORD_RAHASIA:
+            st.session_state["authenticated"] = True
             st.rerun()
-
-# --- 3. ISI HALAMAN ---
-
-# === HALAMAN 1: PROFIL ===
-if halaman == "🏠 Profil Dosen":
-    st.title("👨‍🏫 Profil Dosen")
-    st.markdown("### Iwan Gunawan, PhD")
+        else:
+            st.error("Password Salah! Silakan hubungi Iwan Gunawan, PhD.")
     
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=200)
-    with col2:
-        st.write("""
-        **Afiliasi:**
-        * Universitas Khairun, Indonesia
-        * Universiti Malaysia Pahang Al-Sultan Abdullah
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Created by: Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
+    st.stop()  # Berhenti di sini jika belum login
+
+# --- 3. TAMPILAN UTAMA (HANYA MUNCUL JIKA PASSWORD BENAR) ---
+
+# Tampilan Judul dan Nama Bapak di Atas
+st.title("📄 Konverter LaTeX ke Word")
+st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #666;'>Universiti Malaysia Pahang Al-Sultan Abdullah</p>", unsafe_allow_html=True)
+
+# CSS untuk mempercantik area upload dan ayat
+st.markdown("""
+    <style>
+    @keyframes kedip { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    [data-testid='stFileUploader'] { background-color: white; border: 2px dashed #4CAF50; padding: 20px; border-radius: 10px; }
+    [data-testid='stFileUploader'] button { background-color: #0066cc !important; color: white !important; }
+    .identitas-bawah { font-size: 36px !important; font-weight: bold; color: #003366; text-align: center; margin-top: 20px; }
+    .kampus-bawah { font-size: 24px; color: #555; text-align: center; margin-bottom: 30px; }
+    .ayat-container { border: 2px solid #4CAF50; background-color: #f9fff9; padding: 20px; border-radius: 10px; text-align: center; margin-top: 30px; animation: kedip 2s infinite; }
+    .arab { font-size: 32px; color: #006400; font-family: 'Traditional Arabic', serif; margin-bottom: 10px; }
+    .terjemah { font-size: 16px; font-style: italic; color: #333; }
+    </style>
+""", unsafe_allow_html=True)
+
+st.info("Tombol upload ada di dalam kotak garis putus-putus di bawah ini:")
+
+# Tombol Upload
+uploaded_file = st.file_uploader("Upload File .tex Disini", type="tex")
+
+if uploaded_file is not None:
+    with open("input.tex", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    
+    st.write("⏳ Sedang memproses...")
+    
+    try:
+        output_filename = "hasil_konversi.docx"
+        pypandoc.convert_file("input.tex", 'docx', outputfile=output_filename, extra_args=['--mathml'])
         
-        **Bidang Minat:**
-        * Electronics (Audio Amplifiers)
-        * Fluid Mechanics & Thermodynamics
-        * Programming & Web Development
-        """)
-    st.info("👋 Selamat datang! Silakan pilih menu di samping.")
-
-# === HALAMAN 2: KONVERTER LATEX ===
-elif halaman == "📄 Konverter LaTeX":
-    if not st.session_state["authenticated"]:
-        st.title("🔐 Akses Terbatas")
-        st.write("Silakan masukkan password:")
-        input_pass = st.text_input("Password:", type="password")
-        if st.button("Buka Kunci"):
-            if input_pass == PASSWORD_RAHASIA:
-                st.session_state["authenticated"] = True
-                st.rerun()
-            else:
-                st.error("Password Salah!")
-    else:
-        st.title("📄 Konverter LaTeX ke Word")
-        st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #666;'>Universiti Malaysia Pahang Al-Sultan Abdullah</p>", unsafe_allow_html=True)
-
+        st.success("✅ BERHASIL! Silakan download:")
+        
+        with open(output_filename, "rb") as file:
+            st.download_button(
+                label="📥 DOWNLOAD FILE WORD (.DOCX)",
+                data=file,
+                file_name=uploaded_file.name.replace('.tex', '.docx'),
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+        
+        # Bagian Bawah: Identitas Besar dan Ayat Al-Quran Berkedip
         st.markdown("""
-            <style>
-            @keyframes kedip { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-            [data-testid='stFileUploader'] { background-color: white; border: 2px dashed #4CAF50; padding: 20px; border-radius: 10px; }
-            [data-testid='stFileUploader'] button { background-color: #0066cc !important; color: white !important; }
-            .identitas-bawah { font-size: 36px !important; font-weight: bold; color: #003366; text-align: center; margin-top: 20px; }
-            .kampus-bawah { font-size: 24px; color: #555; text-align: center; margin-bottom: 30px; }
-            .ayat-container { border: 2px solid #4CAF50; background-color: #f9fff9; padding: 20px; border-radius: 10px; text-align: center; margin-top: 30px; animation: kedip 2s infinite; }
-            .arab { font-size: 32px; color: #006400; font-family: 'Traditional Arabic', serif; margin-bottom: 10px; }
-            .terjemah { font-size: 16px; font-style: italic; color: #333; }
-            </style>
+            <hr>
+            <div class="identitas-bawah">Created by: Iwan Gunawan, PhD</div>
+            <div class="kampus-bawah">Universiti Malaysia Pahang Al-Sultan Abdullah</div>
+            <div class="ayat-container">
+                <div class="arab">وَأَقِيمُوا الصَّلَاةَ وَآَتُوا الزَّكَاةَ وَأَطِيعُوا الرَّسُولَ لَعَلَّكُمْ تُرْحَمُونَ</div>
+                <div class="terjemah">“Dan dirikanlah shalat, tunaikanlah zakat, dan ta’atlah kepada rasul,<br>
+                supaya kamu diberi rahmat.” (QS. An Nur [24] : 56)</div>
+            </div>
         """, unsafe_allow_html=True)
+        
+    except Exception as e:
+        st.error(f"Gagal Konversi: {e}")
 
-        st.info("Silakan upload file .tex di bawah ini:")
-        uploaded_file = st.file_uploader("", type="tex")
+# Tombol Logout (Opsional)
+if st.sidebar.button("Keluar / Logout"):
+    st.session_state["authenticated"] = False
+    st.rerun()
 
-        if uploaded_file is not None:
-            with open("input.tex", "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            st.write("⏳ Sedang memproses...")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
