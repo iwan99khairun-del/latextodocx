@@ -35,10 +35,11 @@ st.info("""
 
 Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) untuk membuka:
 1.  **📄 Konverter**: Untuk mengubah file LaTeX ke Word.
-2.  **📚 Materi**: Untuk melihat daftar referensi jurnal.
+2.  **📚 List Jurnal**: Untuk melihat daftar referensi jurnal.
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
 
 
 
