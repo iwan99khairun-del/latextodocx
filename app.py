@@ -19,15 +19,15 @@ with col1:
 
 with col2:
     st.write("""
-    ### Tentang Saya
-    Saya adalah dosen dan peneliti dengan afiliasi di:
+    ### Sepercik Harapan
+   Affiliasi:
     * **Universitas Khairun**, Indonesia
     * **Universiti Malaysia Pahang Al-Sultan Abdullah**
 
     ### Minat Penelitian
-    1.  Electronics (Audio Amplifiers)
-    2.  Fluid Mechanics & Thermodynamics
-    3.  Programming & Web Development
+    1.  Combustion
+    2.  Fluid Mechanics & Pumps
+    3.  Drawing 3D
     """)
 
 st.info("""
@@ -39,6 +39,7 @@ Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) unt
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
 
 
 
