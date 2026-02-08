@@ -12,9 +12,9 @@ if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 # --- MENAMBAH SIDEBAR DI SISI KIRI ---
 with st.sidebar:
-# --- MENAMBAH LOGO DI ATAS SIDEBAR ---
-# Ganti link di bawah dengan link gambar logo Bapak atau kampus
-st.sidebar.image("https://github.com/iwan99khairun-del/latextodocx/blob/main/logo1.png", use_container_width=True)
+    # --- MENAMBAH LOGO DI ATAS SIDEBAR ---
+    # Ganti link di bawah dengan link gambar logo Bapak atau kampus
+    st.sidebar.image("https://github.com/iwan99khairun-del/latextodocx/blob/main/logo1.png", use_container_width=True)
 
 with st.sidebar:
     st.title("Menu Navigasi")
@@ -118,6 +118,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
