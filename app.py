@@ -3,7 +3,7 @@ import pypandoc
 import os
 
 # --- 1. PENGATURAN PASSWORD ---
-PASSWORD_RAHASIA = "iwan123"  # Silakan ganti password ini sesuai keinginan Bapak
+PASSWORD_RAHASIA = "123123"  # Silakan ganti password ini sesuai keinginan Bapak
 
 st.set_page_config(page_title="Konverter Pak Iwan", page_icon="📝")
 
@@ -118,6 +118,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
