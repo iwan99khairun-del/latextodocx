@@ -19,7 +19,7 @@ with st.sidebar:
 with st.sidebar:
     st.title("Menu Navigasi")
     # ... kode sidebar lainnya ...
-    st.title("Menu Navigasi")
+   
     st.markdown("---")
     
     # Menambahkan Link Teks
@@ -118,6 +118,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
