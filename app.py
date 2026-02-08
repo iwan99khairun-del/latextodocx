@@ -21,7 +21,7 @@ with st.sidebar:
     # PILIHAN HALAMAN
     # Perhatikan: Pilihannya disimpan dalam variabel 'halaman'
     halaman = st.radio("Pilih Layanan:", 
-        ["🏠 Profil Dosen", "📄 Konverter LaTeX", "📚 Materi & Riset"]
+        ["🏠 Aplikasi", "📄 Konverter LaTeX", "📚 Materi & Riset"]
     )
     
     st.markdown("---")
@@ -156,5 +156,6 @@ elif halaman == "📄 Konverter LaTeX":
                 
             except Exception as e:
                 st.error(f"Gagal Konversi: {e}")
+
 
 
