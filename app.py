@@ -51,6 +51,7 @@ st.markdown("""
 
 st.title("📄 Konverter LaTeX ke Word")
 st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #555;'>Universiti Malaysia Pahang Al Sultan Abdullah</h3>", unsafe_allow_html=True)
 st.info("Tombol upload ada di dalam kotak garis putus-putus di bawah ini:")
 
 # Tombol Upload
@@ -94,4 +95,5 @@ with open("app.py", "w") as f:
     f.write(isi_kode_app)
 
 # --- 3. JALANKAN ---
+
 
