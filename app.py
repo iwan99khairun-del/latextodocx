@@ -6,7 +6,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"  # <--- INI TAMBAHAN PENTINGNYA
 )
-)
+
 
 st.title("👨‍🏫 Portal Iwan Gunawan, PhD")
 st.markdown("---")
@@ -39,4 +39,5 @@ Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) unt
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
 
