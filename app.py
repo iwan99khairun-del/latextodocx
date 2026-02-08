@@ -1,31 +1,38 @@
 import streamlit as st
 
-st.set_page_config(page_title="Portal Akademik", page_icon="🏠", layout="wide")
+st.set_page_config(
+    page_title="Portal Pak Iwan",
+    page_icon="👋",
+)
 
-# Sidebar otomatis untuk logo & link
-with st.sidebar:
-    st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
-    st.write("🔗 **Link Penting:**")
-    st.markdown("[Masjid Al Muttaqin](https://masjid-almuttaqin-gamplong1.blogspot.com/)")
-    st.markdown("[Universiti Malaysia Pahang](https://www.umpsa.edu.my)")
-
-# Isi Halaman Beranda
-st.title("👨‍🏫 Profil Dosen")
-st.markdown("### Iwan Gunawan, PhD")
+st.title("👨‍🏫 Portal Iwan Gunawan, PhD")
+st.markdown("---")
 
 col1, col2 = st.columns([1, 2])
+
 with col1:
+    # Ganti dengan link foto Bapak jika ada
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=200)
+
 with col2:
     st.write("""
-    **Afiliasi:**
-    * Universitas Khairun, Indonesia
-    * Universiti Malaysia Pahang Al-Sultan Abdullah
-    
-    **Bidang Minat:**
-    * Electronics (Audio Amplifiers)
-    * Fluid Mechanics & Thermodynamics
-    * Programming & Web Development
+    ### Tentang Saya
+    Saya adalah dosen dan peneliti dengan afiliasi di:
+    * **Universitas Khairun**, Indonesia
+    * **Universiti Malaysia Pahang Al-Sultan Abdullah**
+
+    ### Minat Penelitian
+    1.  Electronics (Audio Amplifiers)
+    2.  Fluid Mechanics & Thermodynamics
+    3.  Programming & Web Development
     """)
 
-st.info("👈 Silakan pilih menu di sebelah kiri untuk menggunakan Konverter atau melihat daftar Jurnal.")
+st.info("""
+**👈 SILAKAN LIHAT MENU DI KIRI LAYAR**
+
+Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) untuk membuka:
+1.  **📄 Konverter**: Untuk mengubah file LaTeX ke Word.
+2.  **📚 Materi**: Untuk melihat daftar referensi jurnal.
+""")
+
+st.write("📧 Kontak: iwan99khairun@gmail.com")
