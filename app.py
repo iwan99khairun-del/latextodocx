@@ -13,9 +13,9 @@ if "authenticated" not in st.session_state:
 
 # --- 2. TAMPILAN HALAMAN LOGIN ---
 if not st.session_state["authenticated"]:
-    st.title("🔐 Akses Terbatas untuk kalangan sendiri")
+    st.title("🔐 Akses Terbatas")
     st.markdown("### Alat Konversi LaTeX - Iwan Gunawan, PhD")
-    st.markdown("### Alat Konversi LaTeX - Universiti Mlaysia Al sultan Abdullah")
+    st.markdown("### Universiti Mlaysia Al sultan Abdullah")
     input_password = st.text_input("Masukkan Password:", type="password")
     
     if st.button("Masuk"):
@@ -94,4 +94,5 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
