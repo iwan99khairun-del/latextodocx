@@ -10,6 +10,22 @@ st.set_page_config(page_title="Konverter Pak Iwan", page_icon="📝")
 # Inisialisasi status login
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+# --- MENAMBAH SIDEBAR DI SISI KIRI ---
+with st.sidebar:
+    st.title("Menu Navigasi")
+    st.markdown("---")
+    
+    # Menambahkan Link Teks
+    st.write("🔗 **Link Penting:**")
+    st.markdown("[Google Scholar Pak Iwan](https://scholar.google.com)") # Ganti dengan link Bapak
+    st.markdown("[Universiti Malaysia Pahang](https://www.ump.edu.my)")
+    
+    st.markdown("---")
+    st.write("📧 **Kontak:**")
+    st.write("iwan.gunawan@contoh.com") # Sesuaikan email Bapak
+    
+    st.markdown("---")
+    st.info("Alat ini digunakan untuk membantu mahasiswa mengonversi tugas LaTeX ke format Word (.docx).")
 
 # --- 2. TAMPILAN HALAMAN LOGIN ---
 if not st.session_state["authenticated"]:
@@ -95,6 +111,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
