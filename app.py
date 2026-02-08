@@ -21,7 +21,7 @@ with st.sidebar:
     # PILIHAN HALAMAN
     # Perhatikan: Pilihannya disimpan dalam variabel 'halaman'
     halaman = st.radio("Pilih Layanan:", 
-        ["🏠 Aplikasi", "📄 Konverter LaTeX", "📚 Materi & Riset"]
+        ["🏠 Aplikasi Latex to Word", "📄 Konverter LaTeX", "📚 Materi & Riset"]
     )
     
     st.markdown("---")
@@ -45,8 +45,8 @@ with st.sidebar:
 # --- 3. LOGIKA PINDAH HALAMAN ---
 
 # === HALAMAN 1: Aplikasi (Tanpa Password) ===
-if halaman == "🏠 Aplikasi":
-    st.title("👨‍🏫 Aplikasi")
+if halaman == "🏠 Aplikasi Latex to Word":
+    st.title("👨‍🏫 Aplikasi Latex to Word")
     st.markdown("### Iwan Gunawan, PhD")
     
     col1, col2 = st.columns([1, 2])
@@ -156,6 +156,7 @@ elif halaman == "📄 Konverter LaTeX":
                 
             except Exception as e:
                 st.error(f"Gagal Konversi: {e}")
+
 
 
 
