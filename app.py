@@ -46,14 +46,15 @@ nav_col1, nav_col2, nav_col3 = st.columns(3)
 with nav_col1:
     st.success(
         "**📄 Konverter**\n\n"
-        "[Latex to Word & PDF](https://iwan-latex.streamlit.app/konverter)"
+        "[Latex to Word & PDF](https://iwan-latex.streamlit.app/Konverter_Latex_to_Word)"
     )
 
 with nav_col2:
     st.warning(
-        "**📚 Publikasi**\n\n"
-        "[List Jurnal & Conference](https://iwan-latex.streamlit.app/publikasi)"
+        "**📚 International Conference 2026**\n\n"
+        "[List Conference](https://iwan-latex.streamlit.app/List_International_Conference_2026)"
     )
+
 
 
 
