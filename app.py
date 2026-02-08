@@ -31,11 +31,7 @@ with col2:
     st.markdown("* **Universitas Khairun**, Indonesia")
     st.markdown("* **Universiti Malaysia Pahang Al-Sultan Abdullah**")
     
-    st.markdown("---")
-    st.markdown("### 🔬 Fokus Riset")
-    # Menambahkan detail riset Bapak agar terlihat lebih profesional
-    st.info("**Judul Riset:** Effect Of Liquid Additives on Diesel Engine Performance: A Combined Systematic Review and Bibliometric Study")
-    
+     
     st.write("**Minat Penelitian:**")
     st.write("1. Combustion")
     st.write("2. Fluid Mechanics & Pumps")
@@ -56,3 +52,4 @@ with nav_col3:
 # --- 5. SIDEBAR ---
 st.sidebar.title("Menu Utama")
 st.sidebar.info("Gunakan menu di bawah untuk berpindah halaman.")
+
