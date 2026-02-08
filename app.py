@@ -46,10 +46,10 @@ with nav_col1:
     st.success("**📄 Konverter**\n\nLatex to Word & PDF")
 with nav_col2:
     st.warning("**📚 Publikasi**\n\nList Jurnal & Conference")
-with nav_col3:
-    st.error("**📧 Kontak**\n\niwan99khairun@gmail.com")
+
 
 # --- 5. SIDEBAR ---
 st.sidebar.title("Menu Utama")
-st.sidebar.info("Gunakan menu di bawah untuk berpindah halaman.")
+st.sidebar.info("Gunakan menu di atas untuk berpindah halaman.")
+
 
