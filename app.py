@@ -139,12 +139,32 @@ elif halaman == "📚 Materi & Riset":
     st.write("Berikut adalah daftar jurnal terindeks SINTA & Scopus yang direkomendasikan:")
 
     # 1. INPUT DATA (Bisa Bapak tambah terus ke bawah)
+    # 1. INPUT DATA JURNAL (UPDATE TERBARU: 20 JURNAL)
     data_jurnal = [
-        {"No": 1, "Jurnal": "International Journal of Technology (IJTech)", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "Univ. Indonesia", "Link": "https://ijtech.eng.ui.ac.id/"},
-        {"No": 2, "Jurnal": "Indonesian Journal of Science and Technology (IJoST)", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "UPI", "Link": "https://ejournal.upi.edu/index.php/ijost/"},
-        {"No": 3, "Jurnal": "Journal of Engineering and Technological Sciences", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "ITB", "Link": "https://journals.itb.ac.id/index.php/jets"},
-        {"No": 4, "Jurnal": "IPTEK: The Journal of Technology and Science", "Index": "SINTA 1", "Penerbit": "LPPM – ITS", "Link": "https://iptek.its.ac.id/index.php/jts"},
-        {"No": 5, "Jurnal": "Automotive Experiences", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "UM Magelang", "Link": "https://journal.unimma.ac.id/index.php/automotive"},
+        # --- LEVEL INTERNASIONAL / SCOPUS (SINTA 1) ---
+        {"No": 1, "Jurnal": "International Journal of Technology (IJTech)", "Index": "SINTA 1 (SCOPUS Q2)", "Penerbit": "Universitas Indonesia", "Link": "https://ijtech.eng.ui.ac.id/"},
+        {"No": 2, "Jurnal": "Indonesian Journal of Science and Technology (IJoST)", "Index": "SINTA 1 (SCOPUS Q1)", "Penerbit": "UPI Bandung", "Link": "https://ejournal.upi.edu/index.php/ijost/"},
+        {"No": 3, "Jurnal": "Telkomnika (Telecommunication Computing Electronics and Control)", "Index": "SINTA 1 (SCOPUS Q2)", "Penerbit": "Univ. Ahmad Dahlan", "Link": "http://journal.uad.ac.id/index.php/TELKOMNIKA"},
+        {"No": 4, "Jurnal": "Automotive Experiences", "Index": "SINTA 1 (SCOPUS Q2)", "Penerbit": "Univ. Muhammadiyah Magelang", "Link": "https://journal.unimma.ac.id/index.php/automotive"},
+        {"No": 5, "Jurnal": "Journal of Engineering and Technological Sciences", "Index": "SINTA 1 (SCOPUS Q3)", "Penerbit": "ITB", "Link": "https://journals.itb.ac.id/index.php/jets"},
+        {"No": 6, "Jurnal": "International Journal of Electrical and Computer Engineering (IJECE)", "Index": "SINTA 1 (SCOPUS Q2)", "Penerbit": "IAES Institute", "Link": "http://ijece.iaescore.com/"},
+        {"No": 7, "Jurnal": "Bulletin of Electrical Engineering and Informatics (BEEI)", "Index": "SINTA 1 (SCOPUS Q3)", "Penerbit": "Univ. Ahmad Dahlan", "Link": "http://beei.org/"},
+        {"No": 8, "Jurnal": "Makara Journal of Technology", "Index": "SINTA 1 (SCOPUS Q4)", "Penerbit": "Universitas Indonesia", "Link": "https://scholarhub.ui.ac.id/mjt/"},
+        {"No": 9, "Jurnal": "EMITTER International Journal of Engineering Technology", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "PENS Surabaya", "Link": "https://emitter.pens.ac.id/index.php/emitter"},
+        {"No": 10, "Jurnal": "Journal of Mechatronics, Electrical Power, and Vehicular Technology (MEV)", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "BRIN (LIPI)", "Link": "https://mevjournal.com/index.php/mev"},
+
+        # --- LEVEL NASIONAL TERAKREDITASI (SINTA 2) ---
+        {"No": 11, "Jurnal": "Jurnal Nasional Teknik Elektro dan Teknologi Informasi (JNTETI)", "Index": "SINTA 2", "Penerbit": "UGM", "Link": "https://jurnal.ugm.ac.id/v3/JNTETI"},
+        {"No": 12, "Jurnal": "Jurnal Elektronika dan Telekomunikasi", "Index": "SINTA 2", "Penerbit": "BRIN (LIPI)", "Link": "https://www.jurnalet.com/jet"},
+        {"No": 13, "Jurnal": "Jurnal Rekayasa Mesin", "Index": "SINTA 2", "Penerbit": "Universitas Brawijaya", "Link": "https://jrm.ub.ac.id/"},
+        {"No": 14, "Jurnal": "Jurnal Ilmiah Teknik Elektro Komputer dan Informatika (JITEKI)", "Index": "SINTA 2", "Penerbit": "Univ. Ahmad Dahlan", "Link": "http://journal.uad.ac.id/index.php/JITEKI"},
+        {"No": 15, "Jurnal": "ELKOMIKA: Jurnal Teknik Energi Elektrik, Telekomunikasi, & Elektronika", "Index": "SINTA 2", "Penerbit": "Itenas", "Link": "https://ejurnal.itenas.ac.id/index.php/elkomika"},
+        {"No": 16, "Jurnal": "Jurnal Teknologi dan Sistem Komputer", "Index": "SINTA 2", "Penerbit": "Universitas Diponegoro", "Link": "https://jtsiskom.undip.ac.id/"},
+        {"No": 17, "Jurnal": "Jurnal RESTI (Rekayasa Sistem dan Teknologi Informasi)", "Index": "SINTA 2", "Penerbit": "Politeknik Negeri Padang", "Link": "http://jurnal.iaii.or.id/index.php/RESTI"},
+        {"No": 18, "Jurnal": "IPTEK The Journal for Technology and Science", "Index": "SINTA 1", "Penerbit": "ITS Surabaya", "Link": "https://iptek.its.ac.id/index.php/jts"},
+        {"No": 19, "Jurnal": "Register: Jurnal Ilmiah Teknologi Sistem Informasi", "Index": "SINTA 2", "Penerbit": "Unipdu Jombang", "Link": "https://journal.unipdu.ac.id/index.php/register"},
+        {"No": 20, "Jurnal": "Jurnal Pendidikan Teknologi dan Kejuruan", "Index": "SINTA 2", "Penerbit": "UNY", "Link": "https://journal.uny.ac.id/index.php/jptk"},
+    ]
     ]
 
     # 2. MEMBUAT DATAFRAME (TABEL)
@@ -173,3 +193,4 @@ elif halaman == "📚 Materi & Riset":
         file_name='Daftar_Jurnal_Pak_Iwan.csv',
         mime='text/csv',
     )
+
