@@ -18,7 +18,7 @@ col1, col2 = st.columns([1, 2])
 # --- BAGIAN FOTO (COL 1) ---
 # Perhatikan: Baris st.image HARUS menjorok ke dalam
 with col1:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png", width=200)
+    st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/refs/heads/main/kampus.png", width=200)
 
 # --- BAGIAN TEKS (COL 2) ---
 # Perhatikan: Baris st.write HARUS menjorok ke dalam
@@ -46,3 +46,4 @@ Silakan pilih menu di sidebar samping untuk:
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
