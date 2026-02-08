@@ -17,7 +17,7 @@ with st.sidebar:
     
     # Menambahkan Link Teks
     st.write("🔗 **Link Penting:**")
-    st.markdown("[Google Scholar Pak Iwan](https://scholar.google.com)") # Ganti dengan link Bapak
+    st.markdown("[Masjid Al Muttaqin](https://masjid-almuttaqin-gamplong1.blogspot.com/)") # Ganti dengan link Bapak
     st.markdown("[Universiti Malaysia Pahang](https://www.ump.edu.my)")
     
     st.markdown("---")
@@ -111,6 +111,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
