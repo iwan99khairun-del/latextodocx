@@ -2,8 +2,8 @@ import streamlit as st
 import pypandoc
 import os
 
-# --- 1. PENGATURAN AWAL & PASSWORD ---
-PASSWORD_RAHASIA = "iwan123" 
+# --- 1. PENGATURAN AWAL ---
+PASSWORD_RAHASIA = "123123"  # Password Bapak
 
 st.set_page_config(page_title="Portal Pak Iwan", page_icon="📝", layout="wide")
 
@@ -11,58 +11,44 @@ st.set_page_config(page_title="Portal Pak Iwan", page_icon="📝", layout="wide"
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
-# --- 2. SIDEBAR (MENU NAVIGASI) ---
+# --- 2. SIDEBAR (MENU NAVIGASI KIRI) ---
 with st.sidebar:
-    # Logo Kampus/Pribadi
+    # LOGO
     st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
     
-    st.title("Main Menu")
-    # Membuat pilihan halaman seperti template
-    pilihan_halaman = st.radio("Pilih Layanan:", ["🏠 Beranda / Profil", "📄 Konverter LaTeX", "📚 Materi & Riset"])
+    st.title("Menu Utama")
+    
+    # PILIHAN HALAMAN (Ini kuncinya agar jadi seperti template)
+    halaman = st.radio("Pilih Layanan:", 
+        ["🏠 Profil Dosen", "📄 Konverter LaTeX", "📚 Materi & Riset"]
+    )
+    
+    st.markdown("---")
+    
+    # LINK PENTING
+    st.write("🔗 **Link Penting:**")
+    st.markdown("[Masjid Al Muttaqin](https://masjid-almuttaqin-gamplong1.blogspot.com/)")
+    st.markdown("[Universiti Malaysia Pahang](https://www.umpsa.edu.my)")
     
     st.markdown("---")
     st.write("📧 **Kontak:**")
     st.write("iwan99khairun@gmail.com")
     
+    # TOMBOL LOGOUT (Hanya muncul jika sedang login)
     if st.session_state["authenticated"]:
-        if st.sidebar.button("Keluar / Logout"):
+        st.markdown("---")
+        if st.button("Keluar / Logout"):
             st.session_state["authenticated"] = False
             st.rerun()
 
-# --- 3. LOGIKA HALAMAN ---
+# --- 3. LOGIKA PINDAH HALAMAN ---
 
-# --- HALAMAN 1: BERANDA / PROFIL (Tanpa Password) ---
-if pilihan_halaman == "🏠 Beranda / Profil":
+# === HALAMAN 1: PROFIL DOSEN (Tanpa Password) ===
+if halaman == "🏠 Profil Dosen":
     st.title("👨‍🏫 Profil Dosen")
-    st.write("### Iwan Gunawan, PhD")
-    st.write("Affiliation:")
-    st.write("- **Universitas Khairun**, Indonesia")
-    st.write("- **Universiti Malaysia Pahang Al-Sultan Abdullah**")
+    st.markdown("### Iwan Gunawan, PhD")
     
-    st.info("Selamat datang di portal akademik saya. Silakan pilih menu di samping untuk menggunakan alat konverter.")
-
-# --- HALAMAN 2: KONVERTER (Pakai Password) ---
-elif pilihan_halaman == "📄 Konverter LaTeX":
-    if not st.session_state["authenticated"]:
-        st.title("🔐 Akses Terbatas")
-        input_password = st.text_input("Masukkan Password Konverter:", type="password")
-        if st.button("Masuk"):
-            if input_password == PASSWORD_RAHASIA:
-                st.session_state["authenticated"] = True
-                st.rerun()
-            else:
-                st.error("Password Salah!")
-    else:
-        st.title("📄 Konverter LaTeX ke Word")
-        # --- Masukkan Kode Konverter Bapak yang Sudah Jadi di Sini ---
-        uploaded_file = st.file_uploader("Upload File .tex Disini", type="tex")
-        if uploaded_file:
-            st.success("File siap dikonversi!")
-            # (Tambahkan logika pypandoc Bapak di sini)
-
-# --- HALAMAN 3: MATERI & RISET (Tanpa Password) ---
-elif pilihan_halaman == "📚 Materi & Riset":
-    st.title("📚 Publikasi & Riset")
-    st.write("Penelitian terbaru saya mengenai:")
-    st.write("- *Effect Of Liquid Additives on Diesel Engine Performance*")
-    st.markdown("[Lihat di Google Scholar](https://scholar.google.com)")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        # Bapak bisa ganti link gambar ini dengan foto profil Bapak
+        st.image("https://cdn-icons-png.fl
