@@ -55,6 +55,11 @@ with nav_col2:
         "[List Conference](https://iwan-latex.streamlit.app/List_International_Conference_2026)"
     )
 
+with nav_col2:
+    st.warning(
+        "**📚 Membuat Grafik 2026**\n\n"
+        "[Membuat Grafik lebih mudah](https://iwan-latex.streamlit.app/Membuat_grafik)"
+    )
 
 
 
