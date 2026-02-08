@@ -93,14 +93,3 @@ with open("app.py", "w") as f:
     f.write(isi_kode_app)
 
 # --- 3. JALANKAN ---
-print("="*50)
-print("✅ SIAP. Klik link di bawah dan masukkan password.")
-print("="*50)
-ip_address = urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip("\n")
-print(f"PASSWORD:  {ip_address}")
-print("-" * 20)
-print("Tunggu sebentar sampai muncul link 'your url is: ...'")
-print("="*50)
-
-# Kita gunakan tema 'light' bawaan streamlit lewat perintah ini
-!streamlit run app.py --theme.base="light" & lt --port 8501
