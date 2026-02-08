@@ -2,3 +2,5 @@ streamlit
 pypandoc
 pandas
 python-docx
+openpyxl
+matplotlib
