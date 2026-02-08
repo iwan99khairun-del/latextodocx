@@ -1,9 +1,9 @@
 import streamlit as st
 
-# --- 1. KONFIGURASI HALAMAN ---
+# --- 1. KONFIGURASI HALAMAN (Wajib di baris pertama setelah import) ---
 st.set_page_config(
     page_title="Portal Pak Iwan",
-    page_icon="👋",
+    page_icon="👨‍🏫",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -12,49 +12,47 @@ st.set_page_config(
 st.title("👨‍🏫 Portal Iwan Gunawan, PhD")
 st.markdown("---")
 
-# --- 3. MEMBAGI KOLOM (FOTO & TEXT) ---
+# --- 3. PROFIL & AFILIASI ---
 col1, col2 = st.columns([1, 2])
 
-# --- BAGIAN FOTO (COL 1) ---
-# Perhatikan: Baris st.image HARUS menjorok ke dalam
 with col1:
-    st.image("https://brand.umpsa.edu.my/images/2024/02/28/logo-umpsa-full-color__4041x3027.png", width=200)
+    # Menggunakan try-except agar aplikasi tidak mati jika gambar gagal dimuat
+    try:
+        # Prioritaskan file lokal karena repo Bapak Private
+        # Pastikan file 'sepeda.png' atau 'logo1.png' ada di folder utama GitHub
+        st.image("sepeda.png", caption="Iwan Gunawan", width=250)
+    except:
+        # Jika file lokal tidak ada, gunakan URL cadangan
+        st.image("https://brand.umpsa.edu.my/images/2024/02/28/logo-umpsa-full-color__4041x3027.png", width=200)
 
-# --- BAGIAN TEKS (COL 2) ---
-# Perhatikan: Baris st.write HARUS menjorok ke dalam
 with col2:
-    st.write("""
-    ### Sepercik Harapan
-    **Afiliasi:**
-    * **Universitas Khairun**, Indonesia
-    * **Universiti Malaysia Pahang Al-Sultan Abdullah**
+    st.markdown("### Sepercik Harapan")
+    st.write("**Afiliasi:**")
+    st.markdown("* **Universitas Khairun**, Indonesia")
+    st.markdown("* **Universiti Malaysia Pahang Al-Sultan Abdullah**")
+    
+    st.markdown("---")
+    st.markdown("### 🔬 Fokus Riset")
+    # Menambahkan detail riset Bapak agar terlihat lebih profesional
+    st.info("**Judul Riset:** Effect Of Liquid Additives on Diesel Engine Performance: A Combined Systematic Review and Bibliometric Study")
+    
+    st.write("**Minat Penelitian:**")
+    st.write("1. Combustion")
+    st.write("2. Fluid Mechanics & Pumps")
+    st.write("3. Drawing 3D")
 
-    ### Minat Penelitian
-    1.  Combustion
-    2.  Fluid Mechanics & Pumps
-    3.  Drawing 3D
-    """)
+# --- 4. INFO NAVIGASI ---
+st.markdown("---")
+st.subheader("📌 Navigasi Portal")
+nav_col1, nav_col2, nav_col3 = st.columns(3)
 
-# --- 4. INFO NAVIGASI DI BAWAH ---
-st.info("""
-**👈 MENU NAVIGASI ADA DI KIRI**
+with nav_col1:
+    st.success("**📄 Konverter**\n\nLatex to Word & PDF")
+with nav_col2:
+    st.warning("**📚 Publikasi**\n\nList Jurnal & Conference")
+with nav_col3:
+    st.error("**📧 Kontak**\n\niwan99khairun@gmail.com")
 
-Silakan pilih menu di sidebar samping untuk:
-1.  **📄 Konverter Latex to Word**: Mengubah LaTeX ke Word.
-2.  **📄 konversi Latex to Word dan Pdf**: Mengubah LaTeX ke Word dan Pdf
-3.  **📚 List Jurnal**: Melihat daftar jurnal
-
-""")
-
-st.write("📧 Kontak: iwan99khairun@gmail.com")
-
-
-
-
-
-
-
-
-
-
-
+# --- 5. SIDEBAR ---
+st.sidebar.title("Menu Utama")
+st.sidebar.info("Gunakan menu di bawah untuk berpindah halaman.")
