@@ -44,9 +44,9 @@ with st.sidebar:
 
 # --- 3. LOGIKA PINDAH HALAMAN ---
 
-# === HALAMAN 1: PROFIL DOSEN (Tanpa Password) ===
-if halaman == "🏠 Profil":
-    st.title("👨‍🏫 Profil")
+# === HALAMAN 1: Aplikasi (Tanpa Password) ===
+if halaman == "🏠 Aplikasi":
+    st.title("👨‍🏫 Aplikasi")
     st.markdown("### Iwan Gunawan, PhD")
     
     col1, col2 = st.columns([1, 2])
@@ -156,4 +156,5 @@ elif halaman == "📄 Konverter LaTeX":
                 
             except Exception as e:
                 st.error(f"Gagal Konversi: {e}")
+
 
