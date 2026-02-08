@@ -10,29 +10,6 @@ st.set_page_config(page_title="Konverter Pak Iwan", page_icon="📝")
 # Inisialisasi status login
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-# --- MENAMBAH SIDEBAR DI SISI KIRI ---
-with st.sidebar:
-    # --- MENAMBAH LOGO DI ATAS SIDEBAR ---
-    # Ganti link di bawah dengan link gambar logo Bapak atau kampus
-    st.sidebar.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
-
-with st.sidebar:
-    st.title("Menu Navigasi")
-    # ... kode sidebar lainnya ...
-   
-    st.markdown("---")
-    
-    # Menambahkan Link Teks
-    st.write("🔗 **Link Penting:**")
-    st.markdown("[Masjid Al Muttaqin](https://masjid-almuttaqin-gamplong1.blogspot.com/)") # Ganti dengan link Bapak
-    st.markdown("[Universiti Malaysia Pahang](https://www.umpsa.edu.my)")
-    
-    st.markdown("---")
-    st.write("📧 **Kontak:**")
-    st.write("iwan99khairun@gmail.com") # Sesuaikan email Bapak
-    
-    st.markdown("---")
-    st.info("Alat ini digunakan untuk membantu mahasiswa mengonversi tugas LaTeX ke format Word (.docx).")
 
 # --- 2. TAMPILAN HALAMAN LOGIN ---
 if not st.session_state["authenticated"]:
@@ -114,23 +91,8 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Gagal Konversi: {e}")
 
-# Tombol Logout (Opsional)
-if st.sidebar.button("Keluar / Logout"):
+# Tombol Logout (Dipindah ke bawah karena sidebar dihapus)
+st.markdown("---")
+if st.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
