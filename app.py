@@ -32,12 +32,15 @@ with col2:
 
 st.info("""
 **👈 SILAKAN LIHAT MENU DI KIRI LAYAR**
-
+# --- MENAMBAH LOGO DI ATAS SIDEBAR ---
+    # Ganti link di bawah dengan link gambar logo Bapak atau kampus
+    st.sidebar.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
 Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) untuk membuka:
 1.  **📄 Konverter**: Untuk mengubah file LaTeX ke Word.
 2.  **📚 Materi**: Untuk melihat daftar referensi jurnal.
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
 
 
