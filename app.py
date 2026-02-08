@@ -38,7 +38,8 @@ Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) unt
 2.  **📚 List Jurnal**: Untuk melihat daftar referensi jurnal.
 """)
 
-st.write("📧 Kontak: iwan99khairun@gmail.com")
+st.write("📧 Kontak: infak")
+
 
 
 
