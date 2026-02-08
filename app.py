@@ -28,7 +28,7 @@ with col1:
 with col2:
     st.markdown("### Sepercik Harapan")
     st.write("**Afiliasi:**")
-    st.markdown("* **Universitas Khairun**, Indonesia")
+    st.markdown("* **Universitas Khairun, Indonesia**")
     st.markdown("* **Universiti Malaysia Pahang Al-Sultan Abdullah, Malaysia**")
     
      
@@ -54,6 +54,7 @@ with nav_col2:
         "**📚 International Conference 2026**\n\n"
         "[List Conference](https://iwan-latex.streamlit.app/List_International_Conference_2026)"
     )
+
 
 
 
