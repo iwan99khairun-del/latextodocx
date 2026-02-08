@@ -22,7 +22,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.write("📧 **Kontak:**")
-    st.write("iwan.gunawan@contoh.com") # Sesuaikan email Bapak
+    st.write("iwan99khairun@gmail.com") # Sesuaikan email Bapak
     
     st.markdown("---")
     st.info("Alat ini digunakan untuk membantu mahasiswa mengonversi tugas LaTeX ke format Word (.docx).")
@@ -111,6 +111,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
