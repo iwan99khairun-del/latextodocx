@@ -41,9 +41,10 @@ st.info("""
 
 Silakan pilih menu di sidebar samping untuk:
 1.  **📄 Konverter**: Mengubah LaTeX ke Word.
-2.  **📚 List Jurnal**: Melihat daftar referensi.
-3.  **🏷️ Barcode**: Membuat barcode alat.
+2.  **📚 List Jurnal**: Melihat daftar jurnal
+
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
 
