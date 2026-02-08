@@ -12,6 +12,13 @@ if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 # --- MENAMBAH SIDEBAR DI SISI KIRI ---
 with st.sidebar:
+# --- MENAMBAH LOGO DI ATAS SIDEBAR ---
+# Ganti link di bawah dengan link gambar logo Bapak atau kampus
+st.sidebar.image("https://static.wikia.nocookie.net/logopedia/images/3/3f/Universitas_Khairun_Ternate.png/revision/latest?cb=20190922052055", use_container_width=True)
+
+with st.sidebar:
+    st.title("Menu Navigasi")
+    # ... kode sidebar lainnya ...
     st.title("Menu Navigasi")
     st.markdown("---")
     
@@ -111,6 +118,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
