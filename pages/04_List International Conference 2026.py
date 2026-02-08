@@ -1,48 +1,45 @@
-conferences_2026 = [
+import streamlit as st
+
+# Page configuration
+st.set_page_config(page_title="2026 Conferences", layout="wide")
+
+st.title("📅 International Conferences 2026")
+st.markdown("Below is the list of upcoming Mechanical Engineering conferences for 2026.")
+
+# Data structure
+conferences = [
     {
-        "name": "APCOMS-IMEC 2026",
-        "location": "Jakarta, Indonesia",
-        "date": "Late 2026 (TBA)",
-        "url": "https://apcoms-imec.fti.trisakti.ac.id/",
-        "indexing": "Scopus (via Springer LNME)"
+        "Conference Name": "APCOMS-IMEC 2026",
+        "Location": "Jakarta, Indonesia",
+        "Dates": "Late 2026 (TBA)",
+        "Link": "https://apcoms-imec.fti.trisakti.ac.id/",
+        "Status": "Scopus Indexed"
     },
     {
-        "name": "14th International Conference on Mechanical and Manufacturing Engineering (ICME 2026)",
-        "location": "Johor, Malaysia (UTHM)",
-        "date": "August 5 - 6, 2026",
-        "url": "https://conference.uthm.edu.my/index.php/icme/index",
-        "indexing": "Scopus (Accepted papers)"
+        "Conference Name": "ICME 2026",
+        "Location": "Johor, Malaysia",
+        "Dates": "August 5 - 6, 2026",
+        "Link": "https://conference.uthm.edu.my/index.php/icme/index",
+        "Status": "Scopus Indexed"
     },
     {
-        "name": "ASME International Mechanical Engineering Congress & Exposition (IMECE 2026)",
-        "location": "Vancouver, Canada",
-        "date": "November 8 - 12, 2026",
-        "url": "https://www.asme.org/conferences-events/events/imece",
-        "indexing": "Scopus / WoS"
+        "Conference Name": "ASME IMECE 2026",
+        "Location": "Vancouver, Canada",
+        "Dates": "November 8 - 12, 2026",
+        "Link": "https://www.asme.org/conferences-events/events/imece",
+        "Status": "Scopus / WoS"
     },
     {
-        "name": "ASME Turbomachinery Technical Conference & Exposition (Turbo Expo 2026)",
-        "location": "Milan, Italy",
-        "date": "June 15 - 19, 2026",
-        "url": "https://event.asme.org/Turbo-Expo",
-        "indexing": "Scopus / WoS"
-    },
-    {
-        "name": "17th IEEE International Conference on Mechanical and Aerospace Engineering (ICMAE 2026)",
-        "location": "London, UK",
-        "date": "July 15 - 18, 2026",
-        "url": "https://icmae.org/",
-        "indexing": "Scopus / IEEE Xplore"
-    },
-    {
-        "name": "13th International Conference on Mechanical, Automotive and Materials Engineering (CMAME 2026)",
-        "location": "Singapore",
-        "date": "December 18 - 20, 2026",
-        "url": "http://www.cmame.net/",
-        "indexing": "Scopus / Ei Compendex"
+        "Conference Name": "Turbo Expo 2026",
+        "Location": "Milan, Italy",
+        "Dates": "June 15 - 19, 2026",
+        "Link": "https://event.asme.org/Turbo-Expo",
+        "Status": "Scopus / WoS"
     }
 ]
 
-# Quick check: List all URLs
-for conf in conferences_2026:
-    print(f"{conf['name']}: {conf['url']}")
+# Display as a clean table
+st.table(conferences)
+
+# Optional: Add a note about your current research focus
+st.info("💡 Tip: Ensure your manuscript aligns with the 'Mechanical Engineering' or 'Automotive' tracks before submission.")
