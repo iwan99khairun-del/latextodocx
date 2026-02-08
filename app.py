@@ -42,10 +42,20 @@ st.markdown("---")
 st.subheader("📌 Navigasi Portal")
 nav_col1, nav_col2, nav_col3 = st.columns(3)
 
+
 with nav_col1:
-    st.success("**📄 Konverter**\n\nLatex to Word & PDF")
+    st.success(
+        "**📄 Konverter**\n\n"
+        "[Latex to Word & PDF](https://iwan-latex.streamlit.app/konverter)"
+    )
+
 with nav_col2:
-    st.warning("**📚 Publikasi**\n\nList Jurnal & Conference")
+    st.warning(
+        "**📚 Publikasi**\n\n"
+        "[List Jurnal & Conference](https://iwan-latex.streamlit.app/publikasi)"
+    )
+
+
 
 
 
