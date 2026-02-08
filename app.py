@@ -1,57 +1,55 @@
-# --- 1. PERSIAPAN SISTEM ---
-import os
-import urllib.request
-
-# Hapus pengaturan tema lama agar tidak bentrok
-if os.path.exists(".streamlit/config.toml"):
-    os.remove(".streamlit/config.toml")
-
-print("1. Menyiapkan sistem...")
-os.system("pip install streamlit pypandoc > /dev/null")
-os.system("sudo apt-get install pandoc > /dev/null")
-os.system("npm install -g localtunnel > /dev/null") 
-
-# --- 2. MEMBUAT APLIKASI DENGAN TOMBOL BIRU ---
-isi_kode_app = r'''
 import streamlit as st
 import pypandoc
 import os
 
+# --- 1. PENGATURAN PASSWORD ---
+PASSWORD_RAHASIA = "iwan123"  # Silakan ganti password ini sesuai keinginan Bapak
+
 st.set_page_config(page_title="Konverter Pak Iwan", page_icon="📝")
 
-# --- CSS KHUSUS: MEMAKSA TOMBOL UPLOAD JADI BIRU ---
+# Inisialisasi status login
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+# --- 2. TAMPILAN HALAMAN LOGIN ---
+if not st.session_state["authenticated"]:
+    st.title("🔐 Akses Terbatas")
+    st.markdown("### Alat Konversi LaTeX - Iwan Gunawan, PhD")
+    
+    input_password = st.text_input("Masukkan Password:", type="password")
+    
+    if st.button("Masuk"):
+        if input_password == PASSWORD_RAHASIA:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Password Salah! Silakan hubungi Iwan Gunawan, PhD.")
+    
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Created by: Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
+    st.stop()  # Berhenti di sini jika belum login
+
+# --- 3. TAMPILAN UTAMA (HANYA MUNCUL JIKA PASSWORD BENAR) ---
+
+# Tampilan Judul dan Nama Bapak di Atas
+st.title("📄 Konverter LaTeX ke Word")
+st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #666;'>Universiti Malaysia Pahang Al-Sultan Abdullah</p>", unsafe_allow_html=True)
+
+# CSS untuk mempercantik area upload dan ayat
 st.markdown("""
     <style>
-    /* 1. Paksa area upload berwarna putih dengan garis hijau */
-    [data-testid='stFileUploader'] {
-        background-color: white;
-        border: 2px dashed #4CAF50;
-        padding: 20px;
-        border-radius: 10px;
-    }
-    
-    /* 2. Paksa TOMBOL 'Browse files' menjadi BIRU dan Teks PUTIH */
-    [data-testid='stFileUploader'] button {
-        background-color: #0066cc !important;
-        color: white !important;
-        border: none !important;
-        font-weight: bold !important;
-        padding: 10px 20px !important;
-    }
-    
-    /* Style lainnya (Nama & Kedip) */
     @keyframes kedip { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    .identitas { font-size: 36px !important; font-weight: bold; color: #003366; text-align: center; margin-top: 20px; font-family: Arial, sans-serif; }
-    .kampus { font-size: 24px; color: #555; text-align: center; margin-bottom: 30px; }
+    [data-testid='stFileUploader'] { background-color: white; border: 2px dashed #4CAF50; padding: 20px; border-radius: 10px; }
+    [data-testid='stFileUploader'] button { background-color: #0066cc !important; color: white !important; }
+    .identitas-bawah { font-size: 36px !important; font-weight: bold; color: #003366; text-align: center; margin-top: 20px; }
+    .kampus-bawah { font-size: 24px; color: #555; text-align: center; margin-bottom: 30px; }
     .ayat-container { border: 2px solid #4CAF50; background-color: #f9fff9; padding: 20px; border-radius: 10px; text-align: center; margin-top: 30px; animation: kedip 2s infinite; }
     .arab { font-size: 32px; color: #006400; font-family: 'Traditional Arabic', serif; margin-bottom: 10px; }
     .terjemah { font-size: 16px; font-style: italic; color: #333; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📄 Konverter LaTeX ke Word")
-st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align: center; color: #555;'>Universiti Malaysia Pahang Al Sultan Abdullah</h3>", unsafe_allow_html=True)
 st.info("Tombol upload ada di dalam kotak garis putus-putus di bawah ini:")
 
 # Tombol Upload
@@ -77,23 +75,22 @@ if uploaded_file is not None:
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
         
+        # Bagian Bawah: Identitas Besar dan Ayat Al-Quran Berkedip
         st.markdown("""
             <hr>
-            <div class="identitas">Created by: Iwan Gunawan, PhD</div>
-            <div class="kampus">Universiti Malaysia Pahang Al-Sultan Abdullah</div>
+            <div class="identitas-bawah">Created by: Iwan Gunawan, PhD</div>
+            <div class="kampus-bawah">Universiti Malaysia Pahang Al-Sultan Abdullah</div>
             <div class="ayat-container">
                 <div class="arab">وَأَقِيمُوا الصَّلَاةَ وَآَتُوا الزَّكَاةَ وَأَطِيعُوا الرَّسُولَ لَعَلَّكُمْ تُرْحَمُونَ</div>
-                <div class="terjemah">“Dan dirikanlah shalat, tunaikanlah zakat, dan ta’atlah kepada rasul,<br>supaya kamu diberi rahmat.” (QS. An Nur [24] : 56)</div>
+                <div class="terjemah">“Dan dirikanlah shalat, tunaikanlah zakat, dan ta’atlah kepada rasul,<br>
+                supaya kamu diberi rahmat.” (QS. An Nur [24] : 56)</div>
             </div>
         """, unsafe_allow_html=True)
         
     except Exception as e:
-        st.error(f"Gagal: {e}")
-'''
+        st.error(f"Gagal Konversi: {e}")
 
-with open("app.py", "w") as f:
-    f.write(isi_kode_app)
-
-# --- 3. JALANKAN ---
-
-
+# Tombol Logout (Opsional)
+if st.sidebar.button("Keluar / Logout"):
+    st.session_state["authenticated"] = False
+    st.rerun()
