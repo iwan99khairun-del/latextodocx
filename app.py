@@ -40,11 +40,13 @@ st.info("""
 **👈 MENU NAVIGASI ADA DI KIRI**
 
 Silakan pilih menu di sidebar samping untuk:
-1.  **📄 Konverter**: Mengubah LaTeX ke Word.
-2.  **📚 List Jurnal**: Melihat daftar jurnal
+1.  **📄 Konverter Latex to Word**: Mengubah LaTeX ke Word.
+2.  **📄 konversi Latex to Word dan Pdf**: Mengubah LaTeX ke Word dan Pdf
+3.  **📚 List Jurnal**: Melihat daftar jurnal
 
 """)
 
 st.write("📧 Kontak: iwan99khairun@gmail.com")
+
 
 
