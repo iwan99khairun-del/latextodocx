@@ -48,8 +48,7 @@ with nav_col2:
     st.warning("**📚 Publikasi**\n\nList Jurnal & Conference")
 
 
-# --- 5. SIDEBAR ---
-st.sidebar.title("Menu Utama")
-st.sidebar.info("Gunakan menu di atas untuk berpindah halaman.")
+
+
 
 
