@@ -1,6 +1,7 @@
 import streamlit as st
 import pypandoc
 import os
+import pandas as pd  # Kita butuh ini untuk membuat Tabel
 
 # --- 1. PENGATURAN AWAL ---
 PASSWORD_RAHASIA = "123123"  # Password Bapak
@@ -13,15 +14,14 @@ if "authenticated" not in st.session_state:
 
 # --- 2. SIDEBAR (MENU NAVIGASI KIRI) ---
 with st.sidebar:
-    # LOGO (Link Gambar Logo)
+    # LOGO
     st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
     
     st.title("Menu Utama")
     
     # PILIHAN HALAMAN
-    # Perhatikan: Pilihannya disimpan dalam variabel 'halaman'
     halaman = st.radio("Pilih Layanan:", 
-        ["🏠 Aplikasi Latex to Word", "📄 Konverter LaTeX", "📚 Materi & Riset"]
+        ["🏠 Profil Dosen", "📄 Konverter LaTeX", "📚 Materi & Riset"]
     )
     
     st.markdown("---")
@@ -44,14 +44,13 @@ with st.sidebar:
 
 # --- 3. LOGIKA PINDAH HALAMAN ---
 
-# === HALAMAN 1: Aplikasi (Tanpa Password) ===
-if halaman == "🏠 Aplikasi Latex to Word":
-    st.title("👨‍🏫 Aplikasi Latex to Word")
+# === HALAMAN 1: PROFIL DOSEN ===
+if halaman == "🏠 Profil Dosen":
+    st.title("👨‍🏫 Profil Dosen")
     st.markdown("### Iwan Gunawan, PhD")
     
     col1, col2 = st.columns([1, 2])
     with col1:
-        # Gambar Profil (Placeholder ikon orang)
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=200)
     with col2:
         st.write("""
@@ -64,27 +63,11 @@ if halaman == "🏠 Aplikasi Latex to Word":
         * Fluid Mechanics & Thermodynamics
         * Programming & Web Development
         """)
-    
-    st.info("👋 Selamat datang! Silakan pilih menu 'Konverter LaTeX' di samping untuk mengubah file tugas.")
+    st.info("👋 Selamat datang! Silakan pilih menu di samping.")
 
-# === HALAMAN 2: MATERI & RISET (Tanpa Password) ===
-elif halaman == "📚 Materi & Riset":
-    st.title("📚 Publikasi & Riset")
-    st.write("### Penelitian Terbaru")
-    st.markdown("""
-    **Judul:** Effect Of Liquid Additives on Diesel Engine Performance: A Combined Systematic Review and Bibliometric Study.
-    
-    *Paper ini sedang dalam proses submit ke jurnal Automotive Experiences.*
-    """)
-    
-    st.markdown("---")
-    st.write("### Materi Kuliah")
-    st.write("Silakan cek Google Classroom untuk materi terbaru.")
-
-# === HALAMAN 3: KONVERTER LATEX (PAKAI PASSWORD) ===
+# === HALAMAN 2: KONVERTER LATEX (PAKAI PASSWORD) ===
 elif halaman == "📄 Konverter LaTeX":
     
-    # CEK APAKAH SUDAH LOGIN?
     if not st.session_state["authenticated"]:
         st.title("🔐 Akses Terbatas")
         st.markdown("### Area Khusus Mahasiswa")
@@ -99,12 +82,11 @@ elif halaman == "📄 Konverter LaTeX":
                 st.error("Password Salah!")
     
     else:
-        # --- ISI ALAT KONVERSI (KODE ASLI BAPAK) ---
+        # KODE KONVERTER BAPAK
         st.title("📄 Konverter LaTeX ke Word")
         st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #666;'>Universiti Malaysia Pahang Al-Sultan Abdullah</p>", unsafe_allow_html=True)
 
-        # CSS KHUSUS
         st.markdown("""
             <style>
             @keyframes kedip { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
@@ -119,7 +101,6 @@ elif halaman == "📄 Konverter LaTeX":
         """, unsafe_allow_html=True)
 
         st.info("Silakan upload file .tex di bawah ini:")
-
         uploaded_file = st.file_uploader("", type="tex")
 
         if uploaded_file is not None:
@@ -127,13 +108,10 @@ elif halaman == "📄 Konverter LaTeX":
                 f.write(uploaded_file.getbuffer())
             
             st.write("⏳ Sedang memproses...")
-            
             try:
                 output_filename = "hasil_konversi.docx"
                 pypandoc.convert_file("input.tex", 'docx', outputfile=output_filename, extra_args=['--mathml'])
-                
                 st.success("✅ BERHASIL! Silakan download:")
-                
                 with open(output_filename, "rb") as file:
                     st.download_button(
                         label="📥 DOWNLOAD FILE WORD (.DOCX)",
@@ -141,8 +119,6 @@ elif halaman == "📄 Konverter LaTeX":
                         file_name=uploaded_file.name.replace('.tex', '.docx'),
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
-                
-                # Footer + Ayat
                 st.markdown("""
                     <hr>
                     <div class="identitas-bawah">Created by: Iwan Gunawan, PhD</div>
@@ -153,10 +129,47 @@ elif halaman == "📄 Konverter LaTeX":
                         supaya kamu diberi rahmat.” (QS. An Nur [24] : 56)</div>
                     </div>
                 """, unsafe_allow_html=True)
-                
             except Exception as e:
                 st.error(f"Gagal Konversi: {e}")
 
 
+# === HALAMAN 3: MATERI & RISET (Isi Data Jurnal) ===
+elif halaman == "📚 Materi & Riset":
+    st.title("📚 Daftar Referensi Jurnal")
+    st.write("Berikut adalah daftar jurnal terindeks SINTA & Scopus yang direkomendasikan:")
 
+    # 1. INPUT DATA (Bisa Bapak tambah terus ke bawah)
+    data_jurnal = [
+        {"No": 1, "Jurnal": "International Journal of Technology (IJTech)", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "Univ. Indonesia", "Link": "https://ijtech.eng.ui.ac.id/"},
+        {"No": 2, "Jurnal": "Indonesian Journal of Science and Technology (IJoST)", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "UPI", "Link": "https://ejournal.upi.edu/index.php/ijost/"},
+        {"No": 3, "Jurnal": "Journal of Engineering and Technological Sciences", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "ITB", "Link": "https://journals.itb.ac.id/index.php/jets"},
+        {"No": 4, "Jurnal": "IPTEK: The Journal of Technology and Science", "Index": "SINTA 1", "Penerbit": "LPPM – ITS", "Link": "https://iptek.its.ac.id/index.php/jts"},
+        {"No": 5, "Jurnal": "Automotive Experiences", "Index": "SINTA 1 (SCOPUS)", "Penerbit": "UM Magelang", "Link": "https://journal.unimma.ac.id/index.php/automotive"},
+    ]
 
+    # 2. MEMBUAT DATAFRAME (TABEL)
+    df = pd.DataFrame(data_jurnal)
+
+    # 3. TAMPILKAN TABEL DI WEBSITE
+    st.dataframe(
+        df,
+        column_config={
+            "Link": st.column_config.LinkColumn("Website Jurnal"), # Agar link bisa diklik
+        },
+        hide_index=True,
+        use_container_width=True
+    )
+
+    # 4. TOMBOL DOWNLOAD EXCEL/CSV
+    st.markdown("---")
+    st.write("📥 **Unduh Data:**")
+    
+    # Kita ubah jadi CSV agar ringan & cepat di download
+    csv = df.to_csv(index=False).encode('utf-8')
+    
+    st.download_button(
+        label="Download Daftar Jurnal (CSV)",
+        data=csv,
+        file_name='Daftar_Jurnal_Pak_Iwan.csv',
+        mime='text/csv',
+    )
