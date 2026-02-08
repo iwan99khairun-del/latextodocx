@@ -4,19 +4,17 @@ import os
 import pandas as pd
 
 # --- 1. PENGATURAN AWAL ---
-PASSWORD_RAHASIA = "123123"  # Ganti password sesuai keinginan
+PASSWORD_RAHASIA = "123123"  # Password
 
 st.set_page_config(page_title="Portal Pak Iwan", page_icon="📝", layout="wide")
 
-# Inisialisasi status login
+# Inisialisasi Login
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
-# --- 2. SIDEBAR (MENU KIRI) ---
+# --- 2. SIDEBAR NAVIGASI ---
 with st.sidebar:
-    # Logo
     st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/logo1.png", use_container_width=True)
-    
     st.title("Menu Utama")
     
     # Navigasi Halaman
@@ -62,13 +60,11 @@ if halaman == "🏠 Profil Dosen":
         """)
     st.info("👋 Selamat datang! Silakan pilih menu di samping.")
 
-# === HALAMAN 2: KONVERTER LATEX (PASSWORD PROTECTED) ===
+# === HALAMAN 2: KONVERTER LATEX ===
 elif halaman == "📄 Konverter LaTeX":
     if not st.session_state["authenticated"]:
         st.title("🔐 Akses Terbatas")
-        st.markdown("### Area Khusus Mahasiswa")
         st.write("Silakan masukkan password:")
-        
         input_pass = st.text_input("Password:", type="password")
         if st.button("Buka Kunci"):
             if input_pass == PASSWORD_RAHASIA:
@@ -77,7 +73,6 @@ elif halaman == "📄 Konverter LaTeX":
             else:
                 st.error("Password Salah!")
     else:
-        # Kode Konverter
         st.title("📄 Konverter LaTeX ke Word")
         st.markdown("<h3 style='text-align: center; color: #555;'>By Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #666;'>Universiti Malaysia Pahang Al-Sultan Abdullah</p>", unsafe_allow_html=True)
@@ -102,17 +97,3 @@ elif halaman == "📄 Konverter LaTeX":
             with open("input.tex", "wb") as f:
                 f.write(uploaded_file.getbuffer())
             st.write("⏳ Sedang memproses...")
-            try:
-                output_filename = "hasil_konversi.docx"
-                pypandoc.convert_file("input.tex", 'docx', outputfile=output_filename, extra_args=['--mathml'])
-                st.success("✅ BERHASIL! Silakan download:")
-                with open(output_filename, "rb") as file:
-                    st.download_button(
-                        label="📥 DOWNLOAD FILE WORD (.DOCX)",
-                        data=file,
-                        file_name=uploaded_file.name.replace('.tex', '.docx'),
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                st.markdown("""
-                    <hr>
-                    <div class
