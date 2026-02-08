@@ -15,7 +15,7 @@ if "authenticated" not in st.session_state:
 if not st.session_state["authenticated"]:
     st.title("🔐 Akses Terbatas")
     st.markdown("### Alat Konversi LaTeX - Docx")
-     st.markdown("### by Iwan Gunawan, PhD")
+    st.markdown("### by Iwan Gunawan, PhD")
     st.markdown("### Universiti Mlaysia Al sultan Abdullah")
     input_password = st.text_input("Masukkan Password:", type="password")
     
@@ -95,6 +95,7 @@ if uploaded_file is not None:
 if st.sidebar.button("Keluar / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
+
 
 
 
