@@ -15,7 +15,7 @@ col1, col2 = st.columns([1, 2])
 
 with col1:
     # Ganti dengan link foto Bapak jika ada
-    st.image("hhttps://raw.githubusercontent.com/iwan99khairun-del/latextodocx/main/sepeda.png", width=200)
+    st.image("https://raw.githubusercontent.com/iwan99khairun-del/latextodocx/refs/heads/main/sepeda.png", width=200)
 
 with col2:
     st.write("""
@@ -39,6 +39,7 @@ Gunakan menu di samping (klik tanda panah '>' di pojok kiri atas jika di HP) unt
 """)
 
 st.write("📧 Kontak: infak")
+
 
 
 
