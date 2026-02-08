@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Materi & Riset", page_icon="📚", layout="wide")
+st.set_page_config(page_title="List jurnal", page_icon="📚", layout="wide")
 
 st.title("📚 Daftar Referensi Jurnal")
 st.write("Daftar jurnal terindeks SINTA & Scopus (Elektro, Mesin, Informatika):")
