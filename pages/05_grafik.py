@@ -33,7 +33,18 @@ if uploaded_file is not None:
             y_axis = st.selectbox("Pilih Sumbu Y (Vertikal)", columns)
         with col3:
             chart_type = st.selectbox("Jenis Grafik", ["Line Chart", "Bar Chart", "Scatter Plot"])
-            
+        #-----------------------------------------    
+                  # ... (kode sebelumnya: color picker)
+        color = st.color_picker("Pilih Warna Grafik", "#1f77b4")
+        
+        # [BARU] Widget untuk memilih Resolusi (DPI)
+        dpi_pilihan = st.selectbox(
+            "Pilih Resolusi Gambar (DPI)",
+            options=[100, 300, 600],
+            index=1, # Default pilih 300
+            help="300 DPI standar untuk cetak/jurnal. 100 DPI untuk layar komputer."
+        )
+        #--------------------------------------------
         color = st.color_picker("Pilih Warna Grafik", "#1f77b4")
 
         # 4. Logic Membuat Grafik dengan Matplotlib
