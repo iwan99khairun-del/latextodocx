@@ -217,7 +217,7 @@ if uploaded_file is not None:
             else:
                 ax = fig.add_subplot(111)
                 
-                # --- COMBO CHART (BARU) ---
+                # --- COMBO CHART (BARU - PERBAIKAN LEGEND) ---
                 if chart_type == "📊 + 📈 Combo Chart (Bar + Line)":
                     st.info("Tips: Pilih kolom untuk Bar (kiri) dan Line (kanan).")
                     
@@ -234,6 +234,8 @@ if uploaded_file is not None:
                         x_data = df[x_axis].astype(str).values 
                         x_indexes = np.arange(len(x_data))
                         
+                        ax_line = None # Inisialisasi
+
                         # Plot BARS
                         if bar_cols:
                             ax.set_ylabel("Nilai Batang", color="tab:blue")
@@ -245,7 +247,7 @@ if uploaded_file is not None:
                                 offset = (i - len(bar_cols)/2) * width + (width/2)
                                 ax.bar(x_indexes + offset, df[col], width=width, label=col, alpha=0.7)
                             
-                            ax.legend(loc='upper left', title="Bar")
+                            # Note: ax.legend dihapus disini agar tidak dobel
 
                         # Plot LINES (Dual Axis)
                         if line_cols:
@@ -261,7 +263,20 @@ if uploaded_file is not None:
                                 c = colors[i % len(colors)]
                                 ax_line.plot(x_indexes, df[col], marker='o', linewidth=2, color=c, label=col)
                             
-                            ax_line.legend(loc='upper right', title="Line")
+                            # Note: ax_line.legend dihapus disini agar tidak dobel
+
+                        # --- LOGIKA GABUNG LEGEND (FIX) ---
+                        # Ambil handles/labels dari Bar (ax)
+                        h1, l1 = ax.get_legend_handles_labels()
+                        
+                        # Ambil handles/labels dari Line (ax_line) jika ada dan berbeda dari ax
+                        h2, l2 = [], []
+                        if ax_line is not None and ax_line != ax:
+                            h2, l2 = ax_line.get_legend_handles_labels()
+                        
+                        # Gabungkan dan taruh di Kiri Atas
+                        if h1 or h2:
+                            ax.legend(h1 + h2, l1 + l2, loc='upper left')
 
                         # Rapikan Sumbu X
                         ax.set_xticks(x_indexes)
