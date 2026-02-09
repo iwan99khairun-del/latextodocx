@@ -9,7 +9,7 @@ import google.generativeai as genai
 # --- KONFIGURASI API KEY (Mengambil dari Secrets) ---
 try:
     # Mengambil kunci yang sudah Anda simpan di Secrets
-    api_key = st.secrets["GOOGLE_API_KEY"]
+    api_key = st.secrets["AIzaSyBjvBkrPQyMc12gbFzH7gkWO_oaTQHPO6M"]
     genai.configure(api_key=api_key)
 except Exception:
     st.error("Gagal mengambil API Key. Pastikan sudah disimpan di Secrets!")
