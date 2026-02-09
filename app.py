@@ -58,8 +58,9 @@ with nav_col2:
 with nav_col2:
     st.warning(
         "**📚 Membuat Grafik 2026**\n\n"
-        "[Membuat Grafik lebih mudah](https://iwan-latex.streamlit.app/Membuat_grafik)"
+        "[Membuat Grafik lebih mudah](https://iwan-latex.streamlit.app/Membuat_grafik_Jurnal)"
     )
+
 
 
 
