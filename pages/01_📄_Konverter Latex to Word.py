@@ -13,7 +13,7 @@ if "authenticated" not in st.session_state:
 
 # --- 2. TAMPILAN HALAMAN LOGIN ---
 if not st.session_state["authenticated"]:
-    st.title("🔐 Akses Terbatas")
+    st.title("🔐 Akses Dibatasi")
     st.markdown("### Alat Konversi LaTeX - Docx")
     st.markdown("### by Iwan Gunawan, PhD")
     st.markdown("### Universiti Malaysia Al sultan Abdullah")
