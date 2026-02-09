@@ -122,7 +122,7 @@ if uploaded_file:
 
             with col_kanan:
                 # C. GAMBAR
-                st.subheader("🖼️ Hasil Grafik")
+                st.subheader("🖼️ Preview Grafik")
                 fig, ax = plt.subplots(figsize=(fig_w, fig_h))
                 
                 ax.set_facecolor('white')
