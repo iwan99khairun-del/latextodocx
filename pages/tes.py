@@ -3,7 +3,16 @@ import rispy
 import fitz  # PyMuPDF
 import io
 import google.generativeai as genai
+import streamlit as st
+import google.generativeai as genai
 
+# --- KONFIGURASI API KEY (Mengambil dari Secrets) ---
+try:
+    # Mengambil kunci yang sudah Anda simpan di Secrets
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+except Exception:
+    st.error("Gagal mengambil API Key. Pastikan sudah disimpan di Secrets!")
 # --- KONFIGURASI API KEY ---
 # Mengambil kunci dari Secrets Streamlit agar aman
 try:
