@@ -138,4 +138,13 @@ if uploaded_file:
                 if os.path.exists("temp.pdf"): os.remove("temp.pdf")
                 if os.path.exists("temp.docx"): os.remove("temp.docx")
             elif uploaded_file.name.endswith('.docx'):
-                doc_res = process_docx(uploaded_
+                doc_res = process_docx(uploaded_file, SRC_LANG, TGT_LANG)
+
+            if doc_res:
+                st.balloons()
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.download_button("Download .DOCX", save_docx(doc_res), 
+                                    file_name=f"Terjemahan_{uploaded_file.name.split('.')[0]}.docx",
+                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    use_container_width=True)
