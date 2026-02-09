@@ -29,7 +29,7 @@ if not st.session_state["authenticated"]:
             st.markdown("""
             # 💸 WADUH SALAH BOS!
             # BAYAR 500 JUTA DULU BARU BOLEH MASUK! 🤣
-            # hubungi Iwan Gunawan, PhD 🤣
+            # hubungi sodara  Iwan Gunawan, PhD 🤣
             """)
     
     # Stop di sini, jangan jalankan aplikasi di bawah sebelum login
