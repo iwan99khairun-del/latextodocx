@@ -67,6 +67,11 @@ with nav_col2:
         "[List Jurnal Scopus](https://iwan-latex.streamlit.app/List_Jurnal)"
     )
 
+with nav_col1:
+    st.success(
+        "**📚 Membuat Grafik jurnal**\n\n"
+        "[Menghitung Statistik](https://iwan-latex.streamlit.app/Statistik)"
+    )
 
 
 
