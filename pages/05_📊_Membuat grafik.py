@@ -3,13 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import io
+# Import toolkit 3D secara eksplisit (kadang diperlukan untuk versi matplotlib tertentu)
+from mpl_toolkits.mplot3d import Axes3D 
 
 # --- 1. Konfigurasi Halaman ---
 st.set_page_config(page_title="Studio Grafik Dual-Axis", layout="wide")
-st.title("📊 Studio Grafik Pro: Dual Axis Support")
+st.title("📊 Studio Grafik Pro: Dual Axis & 3D Support")
 st.markdown("""
-Fitur Baru: **Dual Y-Axis**. Sekarang Bapak bisa memplot data dengan satuan berbeda (misal: Tekanan vs RPM) 
-di sumbu Kiri dan Kanan sekaligus.
+Fitur: **Dual Y-Axis** & **3D Line Plot**. Upload data Excel Anda untuk mulai memvisualisasikan data.
 """)
 
 # --- 2. Fungsi Load Data ---
@@ -46,15 +47,26 @@ if uploaded_file is not None:
         with col_settings:
             st.header("⚙️ Pengaturan")
             
-            # Pilihan Jenis Grafik
+            # Pilihan Jenis Grafik (Menambahkan 3D Line Chart)
             chart_type = st.selectbox(
                 "Pilih Jenis Grafik",
-                ["📈 Line Chart (Dual Axis)", "📊 Bar Chart", "🔵 Scatter Plot", "🥧 Pie Chart", "🔥 Heatmap"]
+                [
+                    "📈 Line Chart (Dual Axis)", 
+                    "🧊 3D Line Chart",  # <--- ITEM BARU
+                    "📊 Bar Chart", 
+                    "🔵 Scatter Plot", 
+                    "🥧 Pie Chart", 
+                    "🔥 Heatmap"
+                ]
             )
             
             st.divider()
             
-            fig, ax = plt.subplots(figsize=(10, 6))
+            # Inisialisasi Figure
+            fig = plt.figure(figsize=(10, 6))
+            
+            # Kita buat ax default (2D), nanti jika 3D dipilih, kita timpa.
+            ax = fig.add_subplot(111) 
             
             # --- LOGIKA KHUSUS DUAL AXIS (LINE CHART) ---
             if chart_type == "📈 Line Chart (Dual Axis)":
@@ -80,7 +92,7 @@ if uploaded_file is not None:
                             ax.plot(df[x_axis], df[col], label=f"{col} (Kiri)", linestyle='-', marker='o')
                         ax.tick_params(axis='y', labelcolor="tab:blue")
 
-                    # 2. Plot Sumbu Kanan (Ax2) - KUNCINYA DI SINI
+                    # 2. Plot Sumbu Kanan (Ax2)
                     if y_right:
                         ax2 = ax.twinx()  # Membuat kembaran sumbu X tapi Y-nya beda
                         ax2.set_ylabel("Sumbu Kanan", color="tab:red")
@@ -91,6 +103,29 @@ if uploaded_file is not None:
                     
                     # Judul
                     ax.set_title(f"Grafik Dual Axis: {x_axis}", pad=20)
+
+            # --- LOGIKA KHUSUS 3D LINE CHART (BARU) ---
+            elif chart_type == "🧊 3D Line Chart":
+                st.info("Pilih 3 variabel untuk sumbu X, Y, dan Z.")
+                
+                # Kita perlu menghapus axis 2D default dan menggantinya dengan 3D projection
+                fig.clear()
+                ax = fig.add_subplot(111, projection='3d')
+
+                col_x, col_y, col_z = st.columns(3)
+                with col_x: x_axis = st.selectbox("Sumbu X", columns, key="3dx")
+                with col_y: y_axis = st.selectbox("Sumbu Y", columns, key="3dy")
+                with col_z: z_axis = st.selectbox("Sumbu Z (Tinggi)", columns, key="3dz")
+
+                if x_axis and y_axis and z_axis:
+                    # Plotting 3D Line
+                    ax.plot(df[x_axis], df[y_axis], df[z_axis], marker='o', markersize=4, linestyle='-', linewidth=2)
+                    
+                    # Labeling
+                    ax.set_xlabel(x_axis)
+                    ax.set_ylabel(y_axis)
+                    ax.set_zlabel(z_axis)
+                    ax.set_title(f"3D Plot: {x_axis} vs {y_axis} vs {z_axis}")
 
             # --- LOGIKA GRAFIK LAINNYA (Standar) ---
             elif chart_type == "📊 Bar Chart":
@@ -123,11 +158,11 @@ if uploaded_file is not None:
             tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
             dpi = st.number_input("Resolusi (DPI)", 100, 901, 300)
 
-            # Grid & Legend Pintar
-            if tampilkan_grid and "Pie" not in chart_type and "Heatmap" not in chart_type:
+            # Grid logic (Skip grid setting for Pie/Heatmap/3D handled automatically)
+            if tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🧊 3D Line Chart"]:
                 ax.grid(True, linestyle='--', alpha=0.5)
             
-            # Menggabungkan Legenda Kiri & Kanan menjadi satu kotak
+            # Legenda Logic
             if chart_type == "📈 Line Chart (Dual Axis)" and (y_left or y_right):
                 # Trik menggabungkan legend dari 2 sumbu berbeda
                 lines1, labels1 = ax.get_legend_handles_labels()
@@ -136,7 +171,8 @@ if uploaded_file is not None:
                     ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left', bbox_to_anchor=(1.05, 1))
                 else:
                     ax.legend(loc='upper left', bbox_to_anchor=(1.05, 1))
-            elif "Pie" not in chart_type and "Heatmap" not in chart_type:
+            elif chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🧊 3D Line Chart"]:
+                # Default legend placement for standard charts
                 ax.legend(bbox_to_anchor=(1, 1))
 
         # --- 4. PREVIEW & DOWNLOAD ---
@@ -151,11 +187,11 @@ if uploaded_file is not None:
             st.download_button(
                 label=f"⬇️ Download Grafik ({dpi} DPI)",
                 data=buf,
-                file_name="grafik_dual_axis.png",
+                file_name="grafik_studio.png",
                 mime="image/png",
                 use_container_width=True
             )
     else:
         st.error("Format data Excel tidak valid.")
 else:
-    st.info("👋 Upload file Excel untuk mencoba fitur Dual Axis.")
+    st.info("👋 Upload file Excel untuk mencoba fitur Dual Axis dan 3D.")
