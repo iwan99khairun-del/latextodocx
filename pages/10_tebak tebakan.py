@@ -1,57 +1,63 @@
 import streamlit as st
 import random
+import time
 
 def app():
-    st.title("🎲 Tebak-tebakan Nama Binatang")
-    st.write("Klik tombol di bawah untuk memunculkan nama binatang secara acak.")
+    st.title("🎲 Tebak-tebakan Binatang (Magic)")
+    st.write("Coba klik tombol di bawah.")
 
-    # 1. Inisialisasi Database
-    if 'database_binatang' not in st.session_state:
-        st.session_state.database_binatang = [
-            "harimau", "gajah", "kucing", "anjing", "kambing", 
+    # 1. DATABASE BINATANG
+    if 'db_binatang' not in st.session_state:
+        st.session_state.db_binatang = [
+            "harimau", "kucing", "anjing", "kambing", 
             "sapi", "kerbau", "elang", "ular", "tikus",
             "singa", "jerapah", "kuda", "zebra", "buaya",
             "kelinci", "monyet", "ayam", "bebek", "angsa"
         ]
 
-    # 2. Inisialisasi State (Ingatan Aplikasi)
-    if 'binatang_saat_ini' not in st.session_state:
-        st.session_state.binatang_saat_ini = ""
+    # 2. SESSION STATE (INGATAN)
+    if 'hewan_sekarang' not in st.session_state:
+        st.session_state.hewan_sekarang = ""
     
-    # --- BARU: Inisialisasi Penghitung Klik ---
-    if 'jumlah_klik' not in st.session_state:
-        st.session_state.jumlah_klik = 0
+    # Simpan waktu klik terakhir
+    if 'waktu_klik_terakhir' not in st.session_state:
+        st.session_state.waktu_klik_terakhir = 0.0
 
-    # Fungsi logika utama
+    # 3. FUNGSI LOGIKA
     def acak_binatang():
-        # Tambah hitungan klik setiap kali fungsi dipanggil
-        st.session_state.jumlah_klik += 1
-        klik_ke = st.session_state.jumlah_klik
-
-        # LOGIKA 1: Jika ini adalah klik ke-2, WAJIB Gajah
-        if klik_ke == 2:
-            st.session_state.binatang_saat_ini = "gajah"
-            st.warning(f"(Ssst... ini setingan klik ke-{klik_ke})")
+        waktu_sekarang = time.time()
         
-        # LOGIKA 2: Jika sebelumnya Kambing, maka sekarang WAJIB Kijang
-        # (Kita pakai 'elif' supaya tidak menimpa logika Gajah jika kebetulan klik ke-2)
-        elif st.session_state.binatang_saat_ini == "kambing":
-            st.session_state.binatang_saat_ini = "kijang"
-            st.info("Karena sebelumnya Kambing, maka sekarang pasti Kijang!")
+        # Hitung selisih waktu antara klik sekarang dan klik sebelumnya
+        selisih_waktu = waktu_sekarang - st.session_state.waktu_klik_terakhir
+        
+        # --- ATURAN 1: DOUBLE CLICK (Cepat < 1 detik) ---
+        # Jika selisih waktunya sangat sedikit, berarti user melakukan double click
+        if selisih_waktu < 1.0: 
+            hasil = "gajah"
+            st.toast("🐘 Double Click Terdeteksi! Muncul Gajah!")
+        
+        # --- ATURAN 2: SETELAH KAMBING HARUS KIJANG ---
+        elif st.session_state.hewan_sekarang == "kambing":
+            hasil = "kijang"
+            st.info("Setelah Kambing pasti Kijang!")
             
-        # LOGIKA 3: Selain itu, acak normal
+        # --- ATURAN 3: ACAK BIASA ---
         else:
-            pilihan_baru = random.choice(st.session_state.database_binatang)
-            st.session_state.binatang_saat_ini = pilihan_baru
+            pilihan = st.session_state.db_binatang.copy()
+            # Opsional: Hapus gajah dari acak biasa biar makin misterius
+            if "gajah" in pilihan: pilihan.remove("gajah") 
+            hasil = random.choice(pilihan)
 
-    # 3. Tombol Aksi
-    if st.button("Acak Nama Binatang"):
-        acak_binatang()
+        # Update Session State
+        st.session_state.hewan_sekarang = hasil
+        st.session_state.waktu_klik_terakhir = waktu_sekarang
 
-    # 4. Tampilkan Hasil
-    if st.session_state.binatang_saat_ini:
-        st.subheader(f"Binatang: {st.session_state.binatang_saat_ini.upper()}")
-        st.caption(f"Total klik: {st.session_state.jumlah_klik}")
+    # 4. TOMBOL & TAMPILAN
+    st.button("KLIK SAYA 🎲", on_click=acak_binatang)
+
+    if st.session_state.hewan_sekarang:
+        st.divider()
+        st.header(f"Hasil: {st.session_state.hewan_sekarang.upper()}")
 
 if __name__ == "__main__":
     app()
