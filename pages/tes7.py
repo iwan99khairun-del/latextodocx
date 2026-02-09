@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 st.set_page_config(page_title="Studio Grafik Pro+", layout="wide")
 st.title("📊 Grafik Pro: Grafik untuk Jurnal resolusi tinggi")
 st.markdown("""
-Fitur Baru: **Multi-Z Surface** (Bandingkan beberapa layer sekaligus) & **Stock Chart**.
+Fitur Baru: **Combo Chart (Bar + Line)**, **Multi-Z Surface** & **Stock Chart**.
 """)
 
 # --- 2. Fungsi Load Data ---
@@ -53,6 +53,7 @@ if uploaded_file is not None:
                 "Pilih Jenis Grafik",
                 [
                     "📈 Line Chart (Dual Axis)", 
+                    "📊 + 📈 Combo Chart (Bar + Line)", # <--- BARU
                     "🕯️ Stock Chart (Saham)",       
                     "🏔️ Surface Chart (3D/Contour)", 
                     "🧊 3D Line Chart", 
@@ -67,6 +68,7 @@ if uploaded_file is not None:
             
             # Inisialisasi Figure Default
             fig = plt.figure(figsize=(10, 6))
+            ax = None # Reset ax
             
             # ==========================================
             # A. LOGIKA STOCK CHART
@@ -173,11 +175,8 @@ if uploaded_file is not None:
                                 df_surf = df.dropna(subset=[x_axis, y_axis, z_col])
 
                                 # Tentukan Colormap (Agar berbeda jika ada >1 Z)
-                                # Jika cuma 1 Z, pakai pilihan user. Jika banyak, variasikan.
                                 current_cmap = cmap_choice if len(z_axis_list) == 1 else None
-                                current_color = None
                                 if len(z_axis_list) > 1:
-                                    # Gunakan warna solid berbeda atau transparansi
                                     alpha_val = 0.6
                                 else:
                                     alpha_val = 0.9
@@ -185,7 +184,7 @@ if uploaded_file is not None:
                                 # --- PLOTTING ---
                                 if surf_style == "🗺️ Contour (Peta 2D)":
                                     cntr = ax.tricontourf(df_surf[x_axis], df_surf[y_axis], df_surf[z_col], levels=14, cmap=cmap_choice, alpha=alpha_val)
-                                    if i == 0: fig.colorbar(cntr, ax=ax, label=z_col) # Bar hanya untuk layer pertama biar rapi
+                                    if i == 0: fig.colorbar(cntr, ax=ax, label=z_col) 
                                 
                                 elif surf_style == "🕸️ Wireframe (Jaring)":
                                     ax.plot_trisurf(
@@ -218,7 +217,74 @@ if uploaded_file is not None:
             else:
                 ax = fig.add_subplot(111)
                 
-                if chart_type == "📈 Line Chart (Dual Axis)":
+                # --- COMBO CHART (BARU - PERBAIKAN LEGEND) ---
+                if chart_type == "📊 + 📈 Combo Chart (Bar + Line)":
+                    st.info("Tips: Pilih kolom untuk Bar (kiri) dan Line (kanan).")
+                    
+                    x_axis = st.selectbox("Sumbu X", columns, key="combo_x")
+                    
+                    col_bar, col_line = st.columns(2)
+                    with col_bar:
+                        bar_cols = st.multiselect("Data Batang (Bar) - Sumbu Kiri", [c for c in columns if c!=x_axis], key="combo_bar")
+                    with col_line:
+                        line_cols = st.multiselect("Data Garis (Line) - Sumbu Kanan", [c for c in columns if c!=x_axis], key="combo_line")
+                    
+                    if x_axis and (bar_cols or line_cols):
+                        # Setup X (String/Category)
+                        x_data = df[x_axis].astype(str).values 
+                        x_indexes = np.arange(len(x_data))
+                        
+                        ax_line = None # Inisialisasi
+
+                        # Plot BARS
+                        if bar_cols:
+                            ax.set_ylabel("Nilai Batang", color="tab:blue")
+                            ax.tick_params(axis='y', labelcolor="tab:blue")
+                            
+                            width = 0.8 / len(bar_cols) # Lebar dinamis
+                            for i, col in enumerate(bar_cols):
+                                # Hitung posisi agar bar berjejer (clustered)
+                                offset = (i - len(bar_cols)/2) * width + (width/2)
+                                ax.bar(x_indexes + offset, df[col], width=width, label=col, alpha=0.7)
+                            
+                            # Note: ax.legend dihapus disini agar tidak dobel
+
+                        # Plot LINES (Dual Axis)
+                        if line_cols:
+                            # Jika ada bar, buat twinx, jika tidak pakai ax utama
+                            ax_line = ax.twinx() if bar_cols else ax
+                            
+                            if bar_cols: # Jika mode combo
+                                ax_line.set_ylabel("Nilai Garis", color="tab:red")
+                                ax_line.tick_params(axis='y', labelcolor="tab:red")
+                            
+                            colors = ['tab:red', 'tab:orange', 'tab:green', 'purple']
+                            for i, col in enumerate(line_cols):
+                                c = colors[i % len(colors)]
+                                ax_line.plot(x_indexes, df[col], marker='o', linewidth=2, color=c, label=col)
+                            
+                            # Note: ax_line.legend dihapus disini agar tidak dobel
+
+                        # --- LOGIKA GABUNG LEGEND (FIX) ---
+                        # Ambil handles/labels dari Bar (ax)
+                        h1, l1 = ax.get_legend_handles_labels()
+                        
+                        # Ambil handles/labels dari Line (ax_line) jika ada dan berbeda dari ax
+                        h2, l2 = [], []
+                        if ax_line is not None and ax_line != ax:
+                            h2, l2 = ax_line.get_legend_handles_labels()
+                        
+                        # Gabungkan dan taruh di Kiri Atas
+                        if h1 or h2:
+                            ax.legend(h1 + h2, l1 + l2, loc='upper left')
+
+                        # Rapikan Sumbu X
+                        ax.set_xticks(x_indexes)
+                        ax.set_xticklabels(x_data, rotation=45, ha='right')
+                        ax.set_xlabel(x_axis)
+
+                # --- CHART STANDAR ---
+                elif chart_type == "📈 Line Chart (Dual Axis)":
                     x_axis = st.selectbox("Sumbu X", columns)
                     c_l, c_r = st.columns(2)
                     with c_l: y_left = st.multiselect("Sumbu Kiri", [c for c in columns if c!=x_axis])
@@ -271,12 +337,13 @@ if uploaded_file is not None:
             tampilkan_grid = st.checkbox("Grid", value=True)
             dpi = st.number_input("Resolusi (DPI)", 100, 900, 300)
             
-            if tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap"]:
+            # Terapkan Grid hanya jika ax sudah didefinisikan
+            if ax is not None and tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap"]:
                 try: ax.grid(True, linestyle='--', alpha=0.5)
                 except: pass
             
-            # Legend
-            if chart_type not in ["🥧 Pie Chart", "🔥 Heatmap"]:
+            # Legend Umum (kecuali Combo dan Pie punya logic sendiri)
+            if ax is not None and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "📊 + 📈 Combo Chart (Bar + Line)"]:
                 try: ax.legend(loc='best')
                 except: pass
 
