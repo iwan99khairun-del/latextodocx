@@ -3,137 +3,122 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import io  # Untuk fitur download
+import io
 
-# --- KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="Replika R + Download", layout="centered") # Layout centered biar gambar gak kegedean
-st.title("📊 Replika R (Kecil & Download)")
+st.set_page_config(page_title="Replika R Manual", layout="centered")
+st.title("📊 Replika R (Pilih Kolom Sendiri)")
 
 # --- 1. UPLOAD FILE ---
 uploaded_file = st.file_uploader("Upload File Excel", type=["xlsx", "csv"])
 
 if uploaded_file:
-    # --- 2. PROSES DATA ---
     try:
-        # Baca file (Handle baris 1 kosong)
+        # BACA FILE (Header di baris 2/Index 1, karena baris 1 kosong)
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=1)
         else:
+            # Coba Sheet2 dulu, kalau gagal baru sheet 1
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Sheet2", header=1)
             except:
                 df = pd.read_excel(uploaded_file, header=1)
 
-        # Bersihkan
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
-        df = df.dropna(how='all')
-
-        # Cek Kolom
-        cols = df.columns.tolist()
-        if len(cols) < 2:
-            st.error("Data kurang kolom.")
-            st.stop()
-            
-        col_x = cols[0] # Dosis
-        col_y = cols[1] # Angka
-
-        # Urutan Dosis (Agar 0 gy, 5 gy, dst)
-        urutan_custom = ["0 gy", "5 gy", "10 gy", "15 gy", "20 gy"]
-        cek_data = df[col_x].unique().astype(str)
+        # Bersihkan nama kolom dari spasi aneh
+        df.columns = df.columns.str.strip()
         
-        if any(x in cek_data for x in urutan_custom):
-            # Jika tulisan di excel sama persis dengan urutan custom
-            df[col_x] = pd.Categorical(df[col_x], categories=urutan_custom, ordered=True)
-            urutan_final = urutan_custom
-        else:
-            # Fallback (Urutkan angka saja)
-            import re
-            def sorter(x):
-                m = re.search(r'\d+', str(x))
-                return int(m.group()) if m else 999
-            urutan_final = sorted(df[col_x].unique(), key=sorter)
+        # Hapus kolom yang namanya kosong/Unnamed
+        cols = [c for c in df.columns if "Unnamed" not in str(c)]
+        df = df[cols]
 
-        # Paksa jadi angka
-        df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
-        df = df.dropna(subset=[col_x, col_y])
+        # --- 2. MENU PILIH KOLOM (INI YANG KEMARIN HILANG) ---
+        st.subheader("👇 1. Pilih Kolom Dulu:")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Dropdown untuk memilih Sumbu X
+            pilihan_x = st.selectbox("Pilih Data Sumbu X (Dosis):", df.columns)
+            
+        with col2:
+            # Dropdown untuk memilih Sumbu Y
+            pilihan_y = st.selectbox("Pilih Data Sumbu Y (Angka/Genetik):", df.columns)
 
-        # --- 3. PENGATURAN TAMPILAN (MENU KIRI) ---
-        with st.sidebar:
-            st.header("🎛️ Pengaturan Gambar")
+        # --- 3. PROSES DATA ---
+        if pilihan_x and pilihan_y:
+            # Pastikan Y jadi angka
+            df[pilihan_y] = pd.to_numeric(df[pilihan_y], errors='coerce')
+            df = df.dropna(subset=[pilihan_x, pilihan_y])
+
+            # Atur Urutan Dosis (0 gy, 5 gy...)
+            urutan_custom = ["0 gy", "5 gy", "10 gy", "15 gy", "20 gy"]
+            cek_isi = df[pilihan_x].unique().astype(str)
             
-            # UKURAN GAMBAR (Biar bisa dikecilin)
-            st.subheader("📏 Ukuran Preview")
-            fig_w = st.slider("Lebar Gambar", 3.0, 10.0, 5.0) # Default 5 (Kecil)
-            fig_h = st.slider("Tinggi Gambar", 3.0, 10.0, 4.0) # Default 4 (Kecil)
-            
+            # Cek apakah tulisan di excel sama dengan urutan_custom
+            if any(x in cek_isi for x in urutan_custom):
+                urutan_final = urutan_custom
+            else:
+                # Kalau beda (misal 0 Gy huruf besar), urutkan angka saja
+                import re
+                def sorter(val):
+                    m = re.search(r'\d+', str(val))
+                    return int(m.group()) if m else 999
+                urutan_final = sorted(df[pilihan_x].unique(), key=sorter)
+
+            # --- 4. PENGATURAN TAMPILAN ---
             st.divider()
+            st.subheader("👇 2. Atur Tampilan:")
             
-            # KONTROL POSISI TITIK
-            st.subheader("🎯 Posisi Titik")
-            seed_val = st.number_input("Kode Posisi (Seed)", value=42, step=1, help="Ganti angka ini biar posisi titik berubah.")
-            jitter_width = st.slider("Sebaran (Jitter)", 0.05, 0.3, 0.12)
-            point_size = st.slider("Ukuran Titik", 30, 100, 60)
+            with st.expander("Klik untuk Buka Pengaturan Gambar", expanded=True):
+                c_set1, c_set2 = st.columns(2)
+                with c_set1:
+                    w_fig = st.slider("Lebar Gambar", 3.0, 8.0, 5.0)
+                    h_fig = st.slider("Tinggi Gambar", 3.0, 8.0, 4.0)
+                with c_set2:
+                    seed_val = st.number_input("Kode Posisi (Ganti biar titik geser)", value=42)
+                    jitter_val = st.slider("Sebaran (Jitter)", 0.0, 0.3, 0.12)
 
-        # --- 4. MEMBUAT GRAFIK ---
-        # Pakai ukuran dari slider
-        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-        
-        # Style Box (Mirip R)
-        ax.set_facecolor('white')
-        for spine in ax.spines.values():
-            spine.set_visible(True)
-            spine.set_color('#595959') # grey35
-            spine.set_linewidth(1)
+            # --- 5. GAMBAR GRAFIK (GAYA R) ---
+            fig, ax = plt.subplots(figsize=(w_fig, h_fig))
 
-        # Gambar Boxplot
-        sns.boxplot(
-            data=df, x=col_x, y=col_y, order=urutan_final, ax=ax,
-            width=0.65, showfliers=False,
-            boxprops=dict(facecolor='#CCCCCC', edgecolor='#595959', linewidth=0.9), # grey80
-            whiskerprops=dict(color='#595959', linewidth=0.9),
-            capprops=dict(color='#595959', linewidth=0.9),
-            medianprops=dict(color='#595959', linewidth=2)
-        )
+            # Gaya Kotak R (theme_classic + border)
+            ax.set_facecolor('white')
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color('#595959')
+                spine.set_linewidth(1)
 
-        # Gambar Titik (Jitter)
-        np.random.seed(seed_val) # Kunci posisi
-        sns.stripplot(
-            data=df, x=col_x, y=col_y, order=urutan_final, ax=ax,
-            jitter=jitter_width,
-            size=np.sqrt(point_size),
-            edgecolor='red', linewidth=0.7, # Pinggir Merah
-            color='orange', alpha=0.9,      # Isi Oranye
-            marker='o'
-        )
-
-        # Label
-        ax.set_xlabel(col_x, color='black', fontweight='bold')
-        ax.set_ylabel(col_y, color='black', fontweight='bold')
-        ax.tick_params(colors='black')
-        
-        # --- TAMPILKAN GRAFIK ---
-        st.pyplot(fig)
-
-        # --- 5. MENU DOWNLOAD ---
-        st.write("---")
-        col_dl1, col_dl2 = st.columns([2, 1])
-        
-        with col_dl1:
-            st.write("👇 **Simpan Gambar:**")
-            
-            # Simpan gambar ke memori
-            buffer = io.BytesIO()
-            fig.savefig(buffer, format="png", dpi=300, bbox_inches='tight') # Resolusi tinggi (300 DPI)
-            buffer.seek(0)
-            
-            # Tombol Download
-            st.download_button(
-                label="⬇️ Download Gambar (PNG)",
-                data=buffer,
-                file_name="grafik_replika_R.png",
-                mime="image/png",
-                use_container_width=True
+            # Gambar Boxplot (Abu-abu R)
+            sns.boxplot(
+                data=df, x=pilihan_x, y=pilihan_y, order=urutan_final, ax=ax,
+                width=0.65, showfliers=False,
+                boxprops=dict(facecolor='#CCCCCC', edgecolor='#595959', linewidth=0.9),
+                whiskerprops=dict(color='#595959', linewidth=0.9),
+                capprops=dict(color='#595959', linewidth=0.9),
+                medianprops=dict(color='#595959', linewidth=2)
             )
 
+            # Gambar Titik (Oranye R)
+            np.random.seed(seed_val) # Kunci posisi
+            sns.stripplot(
+                data=df, x=pilihan_x, y=pilihan_y, order=urutan_final, ax=ax,
+                jitter=jitter_val, size=7,
+                edgecolor='red', linewidth=0.7, # Pinggir Merah
+                color='orange', alpha=0.9,      # Isi Oranye
+                marker='o'
+            )
+
+            # Label Sumbu (Ambil dari pilihan Bapak)
+            ax.set_xlabel(pilihan_x, fontweight='bold', color='black')
+            ax.set_ylabel(pilihan_y, fontweight='bold', color='black')
+            ax.tick_params(colors='black')
+
+            st.pyplot(fig)
+
+            # --- 6. DOWNLOAD ---
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+            buf.seek(0)
+            st.download_button("⬇️ Download Gambar PNG", buf, "grafik_replika_R.png", "image/png")
+
     except Exception as e:
-        st.error(f"Eror: {e}")
+        st.error(f"Terjadi kesalahan: {e}")
+        st.write("Coba cek file Excelnya lagi Pak.")
