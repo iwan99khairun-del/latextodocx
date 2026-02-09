@@ -4,18 +4,19 @@ import fitz  # PyMuPDF
 import io
 import google.generativeai as genai
 
-# --- KONFIGURASI API KEY (Mengambil dari Secrets) ---
+# --- 1. KONFIGURASI API KEY ---
 try:
-    # PERBAIKAN: Panggil nama labelnya ("GOOGLE_API_KEY"), BUKAN kode panjangnya.
+    # Kita panggil nama LABEL yang Anda simpan di Secrets (GOOGLE_API_KEY)
+    # Bukan kode panjangnya.
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
 except Exception as e:
-    st.error(f"Gagal mengambil API Key. Error: {e}")
+    st.error("API Key belum disetting di Streamlit Secrets! Pastikan labelnya 'GOOGLE_API_KEY'.")
 
-# --- FUNGSI BANTUAN ---
+# --- 2. FUNGSI BANTUAN ---
 
 def extract_text_from_pdf(uploaded_file):
-    """Mengekstrak teks dari file PDF yang diupload."""
+    """Mengekstrak teks dari file PDF."""
     text = ""
     try:
         with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
@@ -26,10 +27,9 @@ def extract_text_from_pdf(uploaded_file):
     return text
 
 def format_references_for_prompt(ris_file):
-    """Membaca file RIS dan mengubahnya menjadi format list string untuk AI."""
+    """Membaca file RIS dan mengubahnya menjadi format list string."""
     formatted_refs = []
     try:
-        # Streamlit mengembalikan bytes, rispy butuh text. Kita decode dulu.
         ris_text = io.TextIOWrapper(ris_file, encoding='utf-8')
         entries = rispy.load(ris_text)
         
@@ -38,6 +38,7 @@ def format_references_for_prompt(ris_file):
             year = entry.get('year', 'n.d.')
             title = entry.get('title', 'No Title')
             
+            # Format penulis
             if len(authors) > 2:
                 author_str = f"{authors[0]} et al."
             elif len(authors) == 2:
@@ -54,10 +55,10 @@ def format_references_for_prompt(ris_file):
     return "\n".join(formatted_refs)
 
 def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
-    """Mengirim prompt ke AI (Gemini) untuk membuat pendahuluan."""
+    """Mengirim prompt ke AI."""
     try:
-        # Menggunakan model flash agar lebih cepat dan hemat kuota
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # PERBAIKAN: Gunakan 'gemini-pro' karena lebih stabil dan pasti ada
+        model = genai.GenerativeModel('gemini-pro')
         
         prompt = f"""
         Bertindaklah sebagai peneliti akademis. Tuliskan BAGIAN PENDAHULUAN (Introduction) untuk jurnal ilmiah.
@@ -84,23 +85,21 @@ def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
     except Exception as e:
         return f"Terjadi kesalahan pada AI: {e}. (Cek kuota atau API Key)"
 
-# --- APLIKASI UTAMA ---
+# --- 3. APLIKASI UTAMA ---
 
 st.title("Penulis Pendahuluan Otomatis 📝")
 
-# 1. Input Judul
+# Input Judul
 judul = st.text_input("Masukkan Judul Penelitian")
 
-# 2. Upload File PDF
+# Upload File
 materi_pdf = st.file_uploader("Upload Materi (PDF)", type=["pdf"])
-
-# 3. Upload File RIS
 file_ris = st.file_uploader("Upload Referensi (RIS)", type=["ris"])
 
-# 4. Pilih Jumlah Sitasi
+# Pilih Jumlah Sitasi
 jumlah_sitasi = st.number_input("Jumlah sitasi yang diinginkan", min_value=1, max_value=20, value=5)
 
-# Tombol untuk proses
+# Tombol Proses
 if st.button("Buat Pendahuluan"):
     if judul and materi_pdf and file_ris:
         
