@@ -9,27 +9,35 @@ import time
 
 # --- 1. Konfigurasi Halaman ---
 st.set_page_config(page_title="Penerjemah Pro Dua Arah", layout="wide")
+
 st.title("🌐 Penerjemah Dokumen Pro (Dua Arah)")
 st.markdown("Support: **DOCX & PDF** | Fitur: **Format & Tabel Tidak Berubah**")
+st.write("---")
 
-# --- 2. Sidebar Pilihan Bahasa ---
-st.sidebar.header("Pengaturan")
-bahasa_opsi = st.sidebar.selectbox(
-    "Pilih Arah Terjemahan:",
-    ("Indonesia 🇮🇩  ke Inggris 🇬🇧", "Inggris 🇬🇧  ke Indonesia 🇮🇩")
-)
+# --- 2. PENGATURAN BAHASA (Ditaruh di Tengah) ---
 
-# Tentukan kode bahasa berdasarkan pilihan
-if bahasa_opsi == "Indonesia 🇮🇩  ke Inggris 🇬🇧":
-    SRC_LANG = 'id'
-    TGT_LANG = 'en'
-else:
-    SRC_LANG = 'en'
-    TGT_LANG = 'id'
+# Kita bagi layar jadi 3 kolom: [Kiri, Tengah, Kanan]
+# Kita taruh menu di kolom 'Tengah' agar posisinya center
+c1, c2, c3 = st.columns([1, 2, 1])
 
-st.sidebar.info(f"Mode Aktif: {bahasa_opsi}")
+with c2:
+    st.info("🛠️ **Pilih Bahasa Terjemahan:**")
+    bahasa_opsi = st.selectbox(
+        "Mau menerjemahkan dari mana ke mana?",
+        ("Indonesia 🇮🇩  ke Inggris 🇬🇧", "Inggris 🇬🇧  ke Indonesia 🇮🇩")
+    )
 
-# --- 3. Fungsi Utama ---
+    # Tentukan kode bahasa berdasarkan pilihan
+    if bahasa_opsi == "Indonesia 🇮🇩  ke Inggris 🇬🇧":
+        SRC_LANG = 'id'
+        TGT_LANG = 'en'
+    else:
+        SRC_LANG = 'en'
+        TGT_LANG = 'id'
+
+st.write("---") # Garis pembatas
+
+# --- 3. FUNGSI UTAMA (Backend) ---
 
 def translate_text(text, src, tgt):
     """Menerjemahkan teks dengan penanganan error & retry"""
@@ -48,9 +56,7 @@ def translate_text(text, src, tgt):
     return text # Jika gagal total, kembalikan teks asli
 
 def process_docx(file_path_or_buffer, src, tgt):
-    """
-    Menerjemahkan isi DOCX tanpa merusak format.
-    """
+    """Menerjemahkan isi DOCX tanpa merusak format."""
     doc = Document(file_path_or_buffer)
     
     total_elements = len(doc.paragraphs) + len(doc.tables)
@@ -61,20 +67,16 @@ def process_docx(file_path_or_buffer, src, tgt):
     # A. Terjemahkan Paragraf Biasa
     for para in doc.paragraphs:
         if para.text.strip():
-            # Update status agar user tahu proses berjalan
             status.text(f"Menerjemahkan paragraf... ({processed_count}/{total_elements})")
-            
-            # Translate & Ganti
             translated = translate_text(para.text, src, tgt)
             para.text = translated
-            
+        
         processed_count += 1
-        # Update bar (dibatasi max 0.9 agar tidak error)
         progress = min(processed_count / total_elements, 0.9)
         bar.progress(progress)
             
-    # B. Terjemahkan Tabel (Iterasi cell by cell)
-    status.text("Sedang menerjemahkan tabel (ini mungkin agak lama)...")
+    # B. Terjemahkan Tabel
+    status.text("Sedang menerjemahkan tabel...")
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -107,21 +109,17 @@ def save_docx_to_buffer(doc):
     buffer.seek(0)
     return buffer
 
-# --- 4. Tampilan Utama (Upload & Download) ---
+# --- 4. AREA UPLOAD & EKSEKUSI ---
 
 uploaded_file = st.file_uploader("Upload File Anda (PDF atau DOCX)", type=['pdf', 'docx'])
 
 if uploaded_file is not None:
     
-    st.write("---")
     st.write(f"📂 File terdeteksi: **{uploaded_file.name}**")
     
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        tombol_aksi = st.button("🚀 Mulai Terjemahkan", type="primary")
-    
-    if tombol_aksi:
+    # Tombol Eksekusi (Dibuat lebar penuh agar gagah)
+    if st.button("🚀 Mulai Terjemahkan Sekarang", type="primary", use_container_width=True):
+        
         doc_result = None
         
         with st.spinner('Sedang memproses... (Mohon jangan tutup tab ini)'):
@@ -130,7 +128,6 @@ if uploaded_file is not None:
             if uploaded_file.name.endswith('.pdf'):
                 st.info("⚙️ Mengonversi PDF ke format yang bisa diedit...")
                 temp_docx = convert_pdf_to_docx(uploaded_file)
-                # Proses Terjemahan
                 doc_result = process_docx(temp_docx, SRC_LANG, TGT_LANG)
                 
                 # Bersihkan file sampah
@@ -143,15 +140,14 @@ if uploaded_file is not None:
 
             # C. OUTPUT DOWNLOAD
             if doc_result:
-                # Siapkan file DOCX
                 docx_buffer = save_docx_to_buffer(doc_result)
                 
-                # Siapkan file TXT (backup)
                 full_text = []
                 for para in doc_result.paragraphs:
                     full_text.append(para.text)
                 txt_output = '\n'.join(full_text)
                 
+                st.balloons() # Efek balon kalau selesai
                 st.success("🎉 Berhasil! Silakan pilih format download:")
                 
                 d_col1, d_col2 = st.columns(2)
@@ -161,14 +157,16 @@ if uploaded_file is not None:
                         label="📄 Download .DOCX (Layout Asli)",
                         data=docx_buffer,
                         file_name=f"Terjemahan_{uploaded_file.name.split('.')[0]}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
                     )
-                    st.caption("Paling Bagus & Rapi")
+                    st.caption("✅ Paling Direkomendasikan")
 
                 with d_col2:
                     st.download_button(
                         label="📝 Download .TXT (Teks Saja)",
                         data=txt_output,
                         file_name=f"Terjemahan_{uploaded_file.name.split('.')[0]}.txt",
-                        mime="text/plain"
+                        mime="text/plain",
+                        use_container_width=True
                     )
