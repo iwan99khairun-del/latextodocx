@@ -14,3 +14,6 @@ deep-translator
 pdf2docx
 fpdf
 opencv-python-headless
+rispy
+pymupdf
+google-generativeai
