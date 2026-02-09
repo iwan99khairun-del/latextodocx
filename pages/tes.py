@@ -12,7 +12,7 @@ st.set_page_config(page_title="Terjemahan Pro", layout="wide")
 # ==========================================
 # 🔐 PENGATURAN PASSWORD
 # ==========================================
-PASSWORD_RAHASIA = "12345"  # <--- Ganti password di sini
+PASSWORD_RAHASIA = "12345"  # <--- Ganti password Anda di sini
 # ==========================================
 
 # --- 2. FITUR PENGAMAN ---
@@ -20,44 +20,48 @@ def check_password():
     """Mengembalikan True jika user memasukkan password yang benar."""
 
     def password_entered():
-        """Cek apakah password cocok"""
+        """Cek apakah password cocok saat tombol Enter ditekan"""
         if st.session_state["password_input"] == PASSWORD_RAHASIA:
             st.session_state["password_correct"] = True
-            del st.session_state["password_input"]  # Hapus dari memori
+            del st.session_state["password_input"]  # Hapus password dari memori agar aman
         else:
             st.session_state["password_correct"] = False
 
+    # Inisialisasi status login jika belum ada
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
 
     # TAMPILAN JIKA BELUM LOGIN
     if not st.session_state["password_correct"]:
         st.markdown("### 🔒 Halaman Terkunci")
-        st.info("Silakan masukkan password untuk melanjutkan.")
+        st.info("Masukkan password lalu tekan **ENTER**.")
+        
+        # Input Password
         st.text_input(
             "Password:", 
             type="password", 
-            on_change=password_entered, 
+            on_change=password_entered,  # <--- Ini yang bikin otomatis cek saat di-Enter
             key="password_input"
         )
         
-        # --- BAGIAN INI YANG DIUBAH ---
-        if "password_correct" in st.session_state and st.session_state["password_correct"] == False:
-            st.error("💸 Password Salah! Bayar 500 Juta dulu baru boleh masuk! 🤣") 
-        # ------------------------------
+        # Pesan Error Lucu (Muncul jika status 'password_correct' adalah False)
+        if st.session_state["password_correct"] == False:
+            st.error("❌ Password Salah! Transfer 500 Juta dulu ke Admin baru boleh masuk! 🤣") 
         
         return False
     
     return True
 
 # --- 3. LOGIKA UTAMA ---
+# Jika check_password() mengembalikan False, stop loading halaman
 if not check_password():
-    st.stop()  # Stop di sini kalau belum bayar 500 juta (eh, maksudnya belum login)
+    st.stop()
 
 # =========================================================
-#  AREA VIP (HANYA MUNCUL SETELAH LOGIN)
+#  AREA VIP (HANYA MUNCUL SETELAH LOGIN SUKSES)
 # =========================================================
 
+# Tombol Logout
 col_logout, _ = st.columns([1, 8])
 if col_logout.button("🔒 Logout"):
     st.session_state["password_correct"] = False
