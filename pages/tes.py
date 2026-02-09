@@ -3,88 +3,82 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import re
 
-st.set_page_config(page_title="Grafik Final Anti-Eror")
-st.title("🛠️ Grafik: Mode Pembersih Paksa")
+st.set_page_config(page_title="Grafik Manual Pasti Bisa")
+st.title("🛠️ Grafik Manual (Pilih Kolom Sendiri)")
 
 uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
 
 if uploaded_file is not None:
     try:
-        # 1. BACA FILE (Header di baris ke-2, karena baris 1 kosong)
+        # --- 1. BACA FILE (Coba baca header di baris ke-2) ---
+        # Karena file Bapak baris 1-nya kosong
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=1)
         else:
             df = pd.read_excel(uploaded_file, header=1)
 
-        # 2. BERSIH-BERSIH EKSTREM (Sapu Jagat)
-        # Hapus kolom yang isinya kosong semua (Kolom A)
-        df = df.dropna(axis=1, how='all')
-        
-        # Hapus kolom yang namanya aneh (Unnamed) jika masih nyangkut
+        # --- 2. BERSIHKAN KOLOM 'UNNAMED' (Kolom Kosong) ---
+        # Hapus kolom yang namanya aneh/kosong
         df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
         
-        # Hapus baris yang kosong melompong
+        # Hapus baris kosong
         df = df.dropna(how='all')
+        
+        # Tampilkan data supaya Bapak yakin
+        st.write("✅ **Data Berhasil Dibaca:**")
+        st.dataframe(df.head(3))
 
-        # 3. AMBIL 2 KOLOM YANG TERSISA
-        # Kita anggap kolom pertama adalah Dosis, kolom kedua adalah Angka
-        # Apapun namanya!
+        # --- 3. BAPAK PILIH SENDIRI KOLOMNYA ---
+        st.subheader("👇 Pilih Kolom di Sini:")
         cols = df.columns.tolist()
         
-        if len(cols) < 2:
-            st.error("❌ Data tidak terbaca dengan benar. Pastikan Excel minimal ada 2 kolom isi.")
-        else:
-            col_x = cols[0] # Kolom Dosis
-            col_y = cols[1] # Kolom Angka (Diversity/Tinggi)
-            
-            # Konversi kolom ke-2 jadi angka (Paksa)
+        c1, c2 = st.columns(2)
+        with c1:
+            col_x = st.selectbox("Pilih Kolom Dosis (Kategori):", cols)
+        with c2:
+            col_y = st.selectbox("Pilih Kolom Angka (Tinggi/Genetik):", cols)
+
+        # --- 4. GAMBAR GRAFIK ---
+        if col_x and col_y:
+            # Pastikan Y adalah Angka
             df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
             
-            # Buang data yang gagal jadi angka (misal judul nyangkut)
-            df = df.dropna(subset=[col_y])
+            # Pengaturan Tampilan
+            st.write("---")
+            col_opt1, col_opt2 = st.columns(2)
+            with col_opt1:
+                tampil_titik = st.checkbox("Tampilkan Titik-Titik", value=True)
+            with col_opt2:
+                # KUNCI POSISI (Supaya tidak goyang)
+                kunci_posisi = st.number_input("Kunci Posisi (Seed) - Ganti angka ini biar pola berubah", value=42)
 
-            # --- TAMPILAN ---
-            c1, c2 = st.columns([1, 2])
+            fig, ax = plt.subplots(figsize=(8, 6))
             
-            with c1:
-                st.success(f"✅ Data Bersih! \n\nX: {col_x}\n\nY: {col_y}")
-                
-                st.write("---")
-                st.write("🎛️ **Atur Posisi Titik**")
-                
-                # SLIDER JITTER
-                jitter = st.slider("Sebaran (Jitter)", 0.0, 0.4, 0.15, step=0.01)
-                
-                # SEED (PENGUNCI)
-                seed_val = st.number_input("Kode Kunci (Ganti angka ini biar posisi berubah)", value=42)
-                
-                st.info("Selama 'Kode Kunci' sama, posisi titik tidak akan berubah.")
+            # Urutkan Dosis secara alami (0, 5, 10...)
+            # Supaya urutannya tidak berantakan
+            try:
+                urutan = sorted(df[col_x].unique(), key=lambda x: int(''.join(filter(str.isdigit, str(x)))) if any(c.isdigit() for c in str(x)) else x)
+            except:
+                urutan = None # Kalau gagal urutkan, pakai default
 
-            with c2:
-                fig, ax = plt.subplots(figsize=(7, 5))
-                
-                # URUTKAN DOSIS (Biar 0 gy di kiri, 5 gy di kanan)
-                def urutkan(teks):
-                    cari = re.search(r'\d+', str(teks))
-                    return int(cari.group()) if cari else 999
-                
-                urutan_fix = sorted(df[col_x].unique(), key=urutkan)
-                
-                # KUNCI POSISI AGAR DIAM
-                np.random.seed(seed_val)
-                
-                # GAMBAR SCATTER PLOT
-                sns.scatterplot(data=df, x=col_x, y=col_y, order=urutan_fix, ax=ax, 
-                                color='black', alpha=0.6, jitter=jitter, size=60)
-                
-                ax.grid(True, linestyle='--', alpha=0.5)
-                ax.set_ylabel(col_y, fontweight='bold')
-                ax.set_xlabel(col_x, fontweight='bold')
-                
-                st.pyplot(fig)
+            # KUNCI RANDOM AGAR POSISI TETAP
+            np.random.seed(kunci_posisi)
+
+            # GAMBAR
+            sns.boxplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, palette="Pastel1", showfliers=False)
+            
+            if tampil_titik:
+                sns.stripplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
+                              color='black', alpha=0.6, jitter=0.15, size=6)
+
+            ax.set_xlabel(col_x, fontweight='bold')
+            ax.set_ylabel(col_y, fontweight='bold')
+            ax.grid(True, linestyle='--', alpha=0.5)
+            
+            st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"Masih Eror: {e}")
-        st.write("Kemungkinan format file Excel Bapak sangat berbeda dari contoh.")
+        st.error("MASIH EROR.")
+        st.error(f"Pesan: {e}")
+        st.info("Tips: Coba buka Excel Bapak, Hapus Baris 1 (yang kosong), Save, lalu Upload lagi.")
