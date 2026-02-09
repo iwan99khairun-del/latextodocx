@@ -1,8 +1,25 @@
 import streamlit as st
+import subprocess
+import sys
+
+# --- BAGIAN PENTING: PAKSA UPDATE SISTEM ---
+# Kode ini akan memaksa server Streamlit menginstal versi terbaru
+# agar mengenali model Gemini Flash.
+try:
+    import google.generativeai as genai
+    # Cek apakah versi library cukup baru, jika tidak, paksa update
+    from importlib.metadata import version
+    if version("google-generativeai") < "0.7.2":
+        raise ImportError
+except ImportError:
+    st.warning("Sedang meng-update sistem AI... Mohon tunggu sebentar (hanya 1x).")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "google-generativeai"])
+    import google.generativeai as genai
+    st.rerun() # Refresh halaman otomatis setelah update
+
 import rispy
 import fitz  # PyMuPDF
 import io
-import google.generativeai as genai
 
 # --- 1. KONFIGURASI API KEY ---
 try:
@@ -10,7 +27,7 @@ try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
 except Exception as e:
-    st.error("API Key belum disetting di Streamlit Secrets!")
+    st.error("API Key belum disetting di Streamlit Secrets! Pastikan labelnya 'GOOGLE_API_KEY'.")
 
 # --- 2. FUNGSI BANTUAN ---
 
@@ -52,7 +69,7 @@ def format_references_for_prompt(ris_file):
 
 def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
     try:
-        # KITA KEMBALI KE FLASH SETELAH REQUIREMENTS.TXT DIBUAT
+        # Kita gunakan model Flash yang cepat
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
@@ -78,7 +95,7 @@ def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
             return response.text
             
     except Exception as e:
-        return f"Terjadi kesalahan pada AI: {e}. (Pastikan requirements.txt sudah dibuat)"
+        return f"Terjadi kesalahan pada AI: {e}. (Coba Refresh halaman atau cek API Key)"
 
 # --- 3. APLIKASI UTAMA ---
 
