@@ -5,3 +5,6 @@ python-docx
 openpyxl
 matplotlib
 seaborn
+opencv-python-headless
+numpy
+Pillow
