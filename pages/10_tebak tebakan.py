@@ -5,8 +5,7 @@ def app():
     st.title("🎲 Tebak-tebakan Nama Binatang")
     st.write("Klik tombol di bawah untuk memunculkan nama binatang secara acak.")
 
-    # 1. Inisialisasi Database Binatang (Sampel data)
-    # Anda bisa memperbanyak list ini hingga 1000
+    # 1. Inisialisasi Database
     if 'database_binatang' not in st.session_state:
         st.session_state.database_binatang = [
             "harimau", "gajah", "kucing", "anjing", "kambing", 
@@ -16,19 +15,32 @@ def app():
         ]
 
     # 2. Inisialisasi State (Ingatan Aplikasi)
-    # Kita butuh ini agar Streamlit "ingat" binatang apa yang muncul sebelumnya
     if 'binatang_saat_ini' not in st.session_state:
         st.session_state.binatang_saat_ini = ""
     
-    # Fungsi untuk mengacak
+    # --- BARU: Inisialisasi Penghitung Klik ---
+    if 'jumlah_klik' not in st.session_state:
+        st.session_state.jumlah_klik = 0
+
+    # Fungsi logika utama
     def acak_binatang():
-        # Cek apakah binatang yang TAMPIL SEKARANG adalah kambing?
-        # Jika iya, maka selanjutnya WAJIB kijang.
-        if st.session_state.binatang_saat_ini == "kambing":
+        # Tambah hitungan klik setiap kali fungsi dipanggil
+        st.session_state.jumlah_klik += 1
+        klik_ke = st.session_state.jumlah_klik
+
+        # LOGIKA 1: Jika ini adalah klik ke-2, WAJIB Gajah
+        if klik_ke == 2:
+            st.session_state.binatang_saat_ini = "gajah"
+            st.warning(f"(Ssst... ini setingan klik ke-{klik_ke})")
+        
+        # LOGIKA 2: Jika sebelumnya Kambing, maka sekarang WAJIB Kijang
+        # (Kita pakai 'elif' supaya tidak menimpa logika Gajah jika kebetulan klik ke-2)
+        elif st.session_state.binatang_saat_ini == "kambing":
             st.session_state.binatang_saat_ini = "kijang"
             st.info("Karena sebelumnya Kambing, maka sekarang pasti Kijang!")
+            
+        # LOGIKA 3: Selain itu, acak normal
         else:
-            # Jika bukan kambing, acak normal
             pilihan_baru = random.choice(st.session_state.database_binatang)
             st.session_state.binatang_saat_ini = pilihan_baru
 
@@ -39,7 +51,7 @@ def app():
     # 4. Tampilkan Hasil
     if st.session_state.binatang_saat_ini:
         st.subheader(f"Binatang: {st.session_state.binatang_saat_ini.upper()}")
+        st.caption(f"Total klik: {st.session_state.jumlah_klik}")
 
-# Panggil fungsi app jika file dijalankan langsung
 if __name__ == "__main__":
     app()
