@@ -10,12 +10,12 @@ import time
 st.set_page_config(page_title="Terjemahan Pro", layout="wide")
 
 # ==========================================
-# 🔐 PENGATURAN PASSWORD (GANTI DI SINI)
+# 🔐 PENGATURAN PASSWORD
 # ==========================================
-PASSWORD_RAHASIA = "12345"  # <--- Ganti "12345" dengan password keinginan Anda
+PASSWORD_RAHASIA = "12345"  # <--- Ganti password di sini
 # ==========================================
 
-# --- 2. FITUR PENGAMAN SEDERHANA ---
+# --- 2. FITUR PENGAMAN ---
 def check_password():
     """Mengembalikan True jika user memasukkan password yang benar."""
 
@@ -27,7 +27,6 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
 
-    # Cek status login di session
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
 
@@ -41,21 +40,24 @@ def check_password():
             on_change=password_entered, 
             key="password_input"
         )
+        
+        # --- BAGIAN INI YANG DIUBAH ---
         if "password_correct" in st.session_state and st.session_state["password_correct"] == False:
-            st.error("❌ Password salah.")
+            st.error("💸 Password Salah! Bayar 500 Juta dulu baru boleh masuk! 🤣") 
+        # ------------------------------
+        
         return False
     
     return True
 
-# --- 3. LOGIKA UTAMA: JIKA BELUM LOGIN, STOP DI SINI ---
+# --- 3. LOGIKA UTAMA ---
 if not check_password():
-    st.stop()  # <--- Berhenti di sini kalau password belum benar
+    st.stop()  # Stop di sini kalau belum bayar 500 juta (eh, maksudnya belum login)
 
 # =========================================================
-#  AREA VIP: KODE DI BAWAH INI CUMA MUNCUL KALAU LOGIN SUKSES
+#  AREA VIP (HANYA MUNCUL SETELAH LOGIN)
 # =========================================================
 
-# Tombol Logout
 col_logout, _ = st.columns([1, 8])
 if col_logout.button("🔒 Logout"):
     st.session_state["password_correct"] = False
@@ -136,13 +138,4 @@ if uploaded_file:
                 if os.path.exists("temp.pdf"): os.remove("temp.pdf")
                 if os.path.exists("temp.docx"): os.remove("temp.docx")
             elif uploaded_file.name.endswith('.docx'):
-                doc_res = process_docx(uploaded_file, SRC_LANG, TGT_LANG)
-
-            if doc_res:
-                st.balloons()
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.download_button("Download .DOCX", save_docx(doc_res), 
-                                    file_name=f"Terjemahan_{uploaded_file.name.split('.')[0]}.docx",
-                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                    use_container_width=True)
+                doc_res = process_docx(uploaded_
