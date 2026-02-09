@@ -9,18 +9,19 @@ import time
 # --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="Terjemahan Pro", layout="wide")
 
-# --- 2. FITUR PENGAMAN (KHUSUS HALAMAN INI) ---
+# ==========================================
+# 🔐 PENGATURAN PASSWORD (GANTI DI SINI)
+# ==========================================
+PASSWORD_RAHASIA = "12345"  # <--- Ganti "12345" dengan password keinginan Anda
+# ==========================================
+
+# --- 2. FITUR PENGAMAN SEDERHANA ---
 def check_password():
     """Mengembalikan True jika user memasukkan password yang benar."""
-    
-    # Ambil password dari Secrets
-    if "PASSWORD" not in st.secrets:
-        st.error("⚠️ Password belum diatur di Streamlit Secrets!")
-        return False
 
     def password_entered():
         """Cek apakah password cocok"""
-        if st.session_state["password_input"] == st.secrets["PASSWORD"]:
+        if st.session_state["password_input"] == PASSWORD_RAHASIA:
             st.session_state["password_correct"] = True
             del st.session_state["password_input"]  # Hapus dari memori
         else:
@@ -33,7 +34,7 @@ def check_password():
     # TAMPILAN JIKA BELUM LOGIN
     if not st.session_state["password_correct"]:
         st.markdown("### 🔒 Halaman Terkunci")
-        st.info("Menu ini khusus admin/member. Silakan masukkan password.")
+        st.info("Silakan masukkan password untuk melanjutkan.")
         st.text_input(
             "Password:", 
             type="password", 
@@ -48,13 +49,13 @@ def check_password():
 
 # --- 3. LOGIKA UTAMA: JIKA BELUM LOGIN, STOP DI SINI ---
 if not check_password():
-    st.stop()  # <--- INI KUNCINYA: Berhenti memproses jika password salah
+    st.stop()  # <--- Berhenti di sini kalau password belum benar
 
 # =========================================================
 #  AREA VIP: KODE DI BAWAH INI CUMA MUNCUL KALAU LOGIN SUKSES
 # =========================================================
 
-# Tombol Logout Kecil di Pojok
+# Tombol Logout
 col_logout, _ = st.columns([1, 8])
 if col_logout.button("🔒 Logout"):
     st.session_state["password_correct"] = False
