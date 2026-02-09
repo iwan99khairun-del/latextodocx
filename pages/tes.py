@@ -2,75 +2,86 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import io
 import numpy as np
 import re
 
-st.set_page_config(page_title="Pencari Posisi Titik", layout="wide")
-st.title("🎯 Alat Pencari Posisi Titik (Agar Sama Persis)")
+st.set_page_config(page_title="Grafik Copy-Paste", layout="wide")
+st.title("✂️ Grafik Cara Copy-Paste (Pasti Berhasil)")
 
-# --- 1. BACA DATA (KHUSUS FILE BAPAK) ---
-@st.cache_data
-def load_data(file):
+# --- AREA TEMPEL DATA ---
+st.write("### Langkah 1: Copy Data dari Excel, Paste di Sini")
+st.caption("Caranya: Blok data di Excel (termasuk Judul) -> Copy -> Paste di kotak bawah.")
+
+paste_data = st.text_area("Paste Data di sini:", height=200, 
+                          placeholder="Contoh:\nIrradiation Doses\tDiversity_Genetic\n0 gy\t43\n5 gy\t45\n...")
+
+if paste_data:
     try:
-        if file.name.endswith('.csv'):
-            df = pd.read_csv(file, header=1) # Lewati baris 1 kosong
-        else:
-            df = pd.read_excel(file, header=1) # Lewati baris 1 kosong
-            
-        # Hapus kolom kosong (Unnamed)
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
-        df = df.dropna(how='all') # Hapus baris kosong
-        return df
-    except:
-        return None
-
-# --- 2. PROGRAM UTAMA ---
-uploaded_file = st.file_uploader("Upload File Excel", type=["xlsx", "csv"])
-
-if uploaded_file:
-    df = load_data(uploaded_file)
-    
-    if df is not None and len(df.columns) >= 2:
-        # Ambil 2 kolom pertama
-        col_x = df.columns[0] # Dosis
-        col_y = df.columns[1] # Nilai
+        # 1. BACA DATA DARI TEKS
+        # Kita pakai separator tab (\t) karena copy dari excel biasanya tab
+        df = pd.read_csv(io.StringIO(paste_data), sep='\t')
         
-        # Pastikan kolom nilai jadi angka
-        df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
+        # Coba deteksi jika separatornya koma (kalau dari CSV)
+        if len(df.columns) < 2:
+             df = pd.read_csv(io.StringIO(paste_data), sep=',')
 
-        # --- PANEL PENGATUR (SIDEBAR) ---
-        with st.sidebar:
-            st.header("🎛️ KENDALI TITIK")
-            st.write("Ubah angka di bawah ini sampai posisi titik **SAMA** dengan contoh Bapak.")
+        # 2. BERSIHKAN DATA
+        df = df.dropna() # Hapus baris kosong
+        
+        if len(df.columns) < 2:
+            st.error("❌ Data tidak terbaca. Pastikan Anda meng-copy minimal 2 kolom (Dosis & Angka).")
+        else:
+            # Ambil 2 kolom pertama
+            col_x = df.columns[0]
+            col_y = df.columns[1]
             
-            # 1. NOMOR GAYA (SEED) - INI KUNCINYA
-            seed_key = st.number_input("1. NOMOR GAYA (Ganti-ganti angka ini!)", 
-                                       value=42, step=1, 
-                                       help="Setiap angka menghasilkan posisi titik yang berbeda.")
-            
-            # 2. LEBAR SEBARAN
-            width_val = st.slider("2. Lebar Sebaran", 0.05, 0.40, 0.15, step=0.01)
-            
-            # 3. UKURAN TITIK
-            size_val = st.slider("3. Besar Titik", 3, 10, 6)
-            
-            st.warning("Tips: Klik tanda (+) atau (-) pada 'Nomor Gaya' perlahan-lahan sambil melihat gambar.")
+            # Ubah kolom ke-2 jadi angka (Penting!)
+            df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
+            df = df.dropna() # Buang yang bukan angka
 
-        # --- AREA GAMBAR ---
-        col_main, _ = st.columns([3, 1])
-        with col_main:
-            fig, ax = plt.subplots(figsize=(8, 6))
+            # --- PENGATURAN GRAFIK ---
+            st.write("---")
+            c1, c2 = st.columns([1, 2])
             
-            # Urutan Dosis
-            def urutkan(t):
-                cari = re.search(r'\d+', str(t))
-                return int(cari.group()) if cari else 999
-            urutan = sorted(df[col_x].unique(), key=urutkan)
-            
-            # --- BAGIAN AJAIB (PENGUNCI) ---
-            # Apapun angkanya, kuncinya dipasang di sini
-            np.random.seed(seed_key) 
-            # -------------------------------
+            with c1:
+                st.success(f"✅ Data Masuk! ({len(df)} baris)")
+                st.write(f"Sumbu X: **{col_x}**")
+                st.write(f"Sumbu Y: **{col_y}**")
+                
+                st.divider()
+                st.write("🎯 **Cari Posisi Titik**")
+                # SLIDER & SEED
+                jitter = st.slider("Sebaran", 0.0, 0.4, 0.15)
+                seed_val = st.number_input("Nomor Pola (Ganti angka ini!)", value=42, step=1, 
+                                          help="Ganti angka ini sampai titiknya pas.")
+                
+                size_dot = st.slider("Ukuran Titik", 3, 10, 6)
 
-            # Gambar Boxplot
-            sns.boxplot(data=df, x=col_x, y=
+            with c2:
+                fig, ax = plt.subplots(figsize=(7, 5))
+                
+                # Urutkan
+                def urut(x):
+                    res = re.search(r'\d+', str(x))
+                    return int(res.group()) if res else 999
+                urutan = sorted(df[col_x].unique(), key=urut)
+                
+                # KUNCI BIAR GAK GOYANG
+                np.random.seed(seed_val)
+                
+                # GAMBAR
+                sns.boxplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
+                            palette="Pastel1", showfliers=False)
+                
+                sns.stripplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
+                              color='black', alpha=0.6, jitter=jitter, size=size_dot)
+                
+                ax.grid(True, linestyle='--', alpha=0.5)
+                st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Terjadi kesalahan: {e}")
+        st.write("Pastikan data yang di-paste rapi.")
+else:
+    st.info("👆 Menunggu data di-paste...")
