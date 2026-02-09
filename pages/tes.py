@@ -6,17 +6,15 @@ import google.generativeai as genai
 
 # --- 1. KONFIGURASI API KEY ---
 try:
-    # Kita panggil nama LABEL yang Anda simpan di Secrets (GOOGLE_API_KEY)
-    # Bukan kode panjangnya.
+    # Mengambil kunci dari Secrets
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
 except Exception as e:
-    st.error("API Key belum disetting di Streamlit Secrets! Pastikan labelnya 'GOOGLE_API_KEY'.")
+    st.error("API Key belum disetting di Streamlit Secrets!")
 
 # --- 2. FUNGSI BANTUAN ---
 
 def extract_text_from_pdf(uploaded_file):
-    """Mengekstrak teks dari file PDF."""
     text = ""
     try:
         with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
@@ -27,7 +25,6 @@ def extract_text_from_pdf(uploaded_file):
     return text
 
 def format_references_for_prompt(ris_file):
-    """Membaca file RIS dan mengubahnya menjadi format list string."""
     formatted_refs = []
     try:
         ris_text = io.TextIOWrapper(ris_file, encoding='utf-8')
@@ -38,7 +35,6 @@ def format_references_for_prompt(ris_file):
             year = entry.get('year', 'n.d.')
             title = entry.get('title', 'No Title')
             
-            # Format penulis
             if len(authors) > 2:
                 author_str = f"{authors[0]} et al."
             elif len(authors) == 2:
@@ -55,10 +51,9 @@ def format_references_for_prompt(ris_file):
     return "\n".join(formatted_refs)
 
 def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
-    """Mengirim prompt ke AI."""
     try:
-        # PERBAIKAN: Gunakan 'gemini-pro' karena lebih stabil dan pasti ada
-        model = genai.GenerativeModel('gemini-pro')
+        # KITA KEMBALI KE FLASH SETELAH REQUIREMENTS.TXT DIBUAT
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
         Bertindaklah sebagai peneliti akademis. Tuliskan BAGIAN PENDAHULUAN (Introduction) untuk jurnal ilmiah.
@@ -83,27 +78,19 @@ def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
             return response.text
             
     except Exception as e:
-        return f"Terjadi kesalahan pada AI: {e}. (Cek kuota atau API Key)"
+        return f"Terjadi kesalahan pada AI: {e}. (Pastikan requirements.txt sudah dibuat)"
 
 # --- 3. APLIKASI UTAMA ---
 
 st.title("Penulis Pendahuluan Otomatis 📝")
 
-# Input Judul
 judul = st.text_input("Masukkan Judul Penelitian")
-
-# Upload File
 materi_pdf = st.file_uploader("Upload Materi (PDF)", type=["pdf"])
 file_ris = st.file_uploader("Upload Referensi (RIS)", type=["ris"])
-
-# Pilih Jumlah Sitasi
 jumlah_sitasi = st.number_input("Jumlah sitasi yang diinginkan", min_value=1, max_value=20, value=5)
 
-# Tombol Proses
 if st.button("Buat Pendahuluan"):
     if judul and materi_pdf and file_ris:
-        
-        # A. Proses File
         teks_materi = extract_text_from_pdf(materi_pdf)
         string_referensi = format_references_for_prompt(file_ris)
         
@@ -112,15 +99,12 @@ if st.button("Buat Pendahuluan"):
         elif not string_referensi:
             st.warning("File RIS kosong atau tidak terbaca.")
         else:
-            # B. Panggil AI
             hasil_tulisan = generate_introduction(judul, teks_materi, string_referensi, jumlah_sitasi)
             
-            # C. Tampilkan Hasil
             st.success("Selesai!")
             st.subheader("Draft Pendahuluan:")
             st.text_area("Hasil Output", value=hasil_tulisan, height=400)
             
-            # D. Tombol Download
             st.download_button(
                 label="📥 Download Hasil (.txt)",
                 data=hasil_tulisan,
