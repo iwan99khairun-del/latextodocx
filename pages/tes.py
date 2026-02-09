@@ -3,23 +3,14 @@ import rispy
 import fitz  # PyMuPDF
 import io
 import google.generativeai as genai
-import streamlit as st
-import google.generativeai as genai
 
 # --- KONFIGURASI API KEY (Mengambil dari Secrets) ---
 try:
-    # Mengambil kunci yang sudah Anda simpan di Secrets
-    api_key = st.secrets["AIzaSyBjvBkrPQyMc12gbFzH7gkWO_oaTQHPO6M"]
+    # PERBAIKAN: Panggil nama labelnya ("GOOGLE_API_KEY"), BUKAN kode panjangnya.
+    api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-except Exception:
-    st.error("Gagal mengambil API Key. Pastikan sudah disimpan di Secrets!")
-# --- KONFIGURASI API KEY ---
-# Mengambil kunci dari Secrets Streamlit agar aman
-try:
-    API_KEY = st.secrets["AIzaSyBjvBkrPQyMc12gbFzH7gkWO_oaTQHPO6M"]
-    genai.configure(api_key=API_KEY)
-except Exception:
-    st.error("API Key belum disetting di Streamlit Secrets!")
+except Exception as e:
+    st.error(f"Gagal mengambil API Key. Error: {e}")
 
 # --- FUNGSI BANTUAN ---
 
@@ -43,12 +34,10 @@ def format_references_for_prompt(ris_file):
         entries = rispy.load(ris_text)
         
         for entry in entries:
-            # Ambil data penting untuk sitasi APA
             authors = entry.get('authors', ['No Author'])
             year = entry.get('year', 'n.d.')
             title = entry.get('title', 'No Title')
             
-            # Format penulis: "Smith, J." atau "Smith et al."
             if len(authors) > 2:
                 author_str = f"{authors[0]} et al."
             elif len(authors) == 2:
@@ -56,8 +45,6 @@ def format_references_for_prompt(ris_file):
             else:
                 author_str = authors[0]
             
-            # Format baris untuk dibaca AI
-            # Contoh: [1] Smith et al. (2023). Judul Jurnal.
             ref_str = f"- {author_str} ({year}). {title}"
             formatted_refs.append(ref_str)
             
@@ -69,7 +56,8 @@ def format_references_for_prompt(ris_file):
 def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
     """Mengirim prompt ke AI (Gemini) untuk membuat pendahuluan."""
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash') # Atau gemini-pro
+        # Menggunakan model flash agar lebih cepat dan hemat kuota
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
         Bertindaklah sebagai peneliti akademis. Tuliskan BAGIAN PENDAHULUAN (Introduction) untuk jurnal ilmiah.
@@ -84,7 +72,7 @@ def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
         
         Instruksi Khusus:
         1. Tulis dalam Bahasa Indonesia yang akademis dan formal.
-        2. Masukkan setidaknya {jumlah_sitasi} sitasi di dalam teks (in-text citation) menggunakan format APA 7, contoh: (Author, Year) atau Author (Year).
+        2. Masukkan setidaknya {jumlah_sitasi} sitasi di dalam teks (in-text citation) menggunakan format APA 7.
         3. Jangan mengarang referensi di luar daftar yang diberikan.
         4. Alur tulisan: Latar belakang umum -> Masalah penelitian -> Solusi yang ditawarkan.
         """
@@ -94,7 +82,7 @@ def generate_introduction(judul, materi, referensi_str, jumlah_sitasi):
             return response.text
             
     except Exception as e:
-        return f"Terjadi kesalahan pada AI: {e}. (Pastikan API Key sudah benar)"
+        return f"Terjadi kesalahan pada AI: {e}. (Cek kuota atau API Key)"
 
 # --- APLIKASI UTAMA ---
 
