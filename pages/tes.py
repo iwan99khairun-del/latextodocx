@@ -7,7 +7,7 @@ import google.generativeai as genai
 # --- KONFIGURASI API KEY ---
 # Masukkan API Key Google Gemini Anda di sini
 # Dapatkan gratis di: https://aistudio.google.com/app/apikey
-API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI" 
+API_KEY = ".PO6M Gemini API Key" 
 genai.configure(api_key=API_KEY)
 
 # --- FUNGSI BANTUAN ---
