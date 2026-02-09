@@ -7,7 +7,7 @@ import google.generativeai as genai
 # --- KONFIGURASI API KEY ---
 # Mengambil kunci dari Secrets Streamlit agar aman
 try:
-    API_KEY = st.secrets["PO6M"]
+    API_KEY = st.secrets["AIzaSyBjvBkrPQyMc12gbFzH7gkWO_oaTQHPO6M"]
     genai.configure(api_key=API_KEY)
 except Exception:
     st.error("API Key belum disetting di Streamlit Secrets!")
