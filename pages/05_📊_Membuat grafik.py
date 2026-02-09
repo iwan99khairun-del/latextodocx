@@ -6,7 +6,7 @@ import io
 
 # --- 1. Konfigurasi Halaman ---
 st.set_page_config(page_title="Studio Grafik Pro", layout="wide")
-st.title("📊 Studio Grafik Pro: All-in-One cocok untuk jurnal")
+st.title("📊 Studio Grafik Pro: All-in-One (cocok untuk jurnal)")
 st.write("Upload Excel, pilih jenis visualisasi, dan download hasilnya.")
 
 # --- 2. Fungsi Load Data ---
