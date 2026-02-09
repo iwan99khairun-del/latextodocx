@@ -64,8 +64,9 @@ with nav_col1:
 with nav_col2:
     st.warning(
         "**📚 List jurnal scopus**\n\n"
-        "[List Jurnal](https://iwan-latex.streamlit.app/List_Jurnal Scopus)"
+        "[List Jurnal](https://iwan-latex.streamlit.app/List_Jurnal_Scopus)"
     )
+
 
 
 
