@@ -1,22 +1,25 @@
+import streamlit as st
 import rispy
+import pymupdf  # atau fitz
 
-def buat_pendahuluan(judul, materi_pdf, file_ris, jumlah_sitasi):
-    # 1. Load data dari RIS
-    with open(file_ris, 'r') as f:
-        entries = rispy.load(f)
-    
-    # 2. Ambil referensi sesuai jumlah yang diminta user
-    sitasi_terpilih = entries[:jumlah_sitasi]
-    
-    # 3. Format referensi untuk AI (misal: Author, Year)
-    formatted_refs = [f"{e['first_authors'][0]} ({e['year']})" for e in sitasi_terpilih]
-    
-    # 4. Kirim Prompt ke AI (Gemini/GPT)
-    prompt = f"""
-    Tuliskan pendahuluan untuk karya ilmiah berjudul '{judul}'.
-    Gunakan konteks materi berikut: {materi_pdf}
-    Anda WAJIB menyertakan {jumlah_sitasi} sitasi berikut dalam teks: {', '.join(formatted_refs)}.
-    """
-    
-    # Di sini Anda memanggil API AI untuk mendapatkan teks final
-    return "Hasil teks pendahuluan dari AI..."
+st.title("Penulis Pendahuluan Otomatis 📝")
+
+# 1. Input Judul
+judul = st.text_input("Masukkan Judul Penelitian")
+
+# 2. Upload File PDF
+materi_pdf = st.file_uploader("Upload Materi (PDF)", type=["pdf"])
+
+# 3. Upload File RIS
+file_ris = st.file_uploader("Upload Referensi (RIS)", type=["ris"])
+
+# 4. Pilih Jumlah Sitasi
+jumlah_sitasi = st.number_input("Jumlah sitasi yang diinginkan", min_value=1, max_value=20, value=5)
+
+# Tombol untuk proses
+if st.button("Buat Pendahuluan"):
+    if judul and materi_pdf and file_ris:
+        st.info("Sedang memproses... (Logika AI akan ditaruh di sini)")
+        # Di sini nanti kita masukkan kode untuk baca RIS dan kirim ke AI
+    else:
+        st.warning("Mohon lengkapi semua input ya!")
