@@ -82,4 +82,80 @@ if uploaded_file:
                 st.error("Data kosong setelah dibersihkan. Cek apakah kolom yang dipilih isinya angka.")
                 st.stop()
 
-            #
+            # Atur Urutan Kategori (Biar 0 gy, 5 gy...)
+            urutan_custom = ["0 gy", "5 gy", "10 gy", "15 gy", "20 gy"]
+            cek_isi = df_clean[pilihan_x].unique().astype(str)
+            
+            if any(x in cek_isi for x in urutan_custom):
+                df_clean[pilihan_x] = pd.Categorical(df_clean[pilihan_x], categories=urutan_custom, ordered=True)
+                urutan_final = urutan_custom
+            else:
+                # Sortir manual angka
+                import re
+                def sorter(val):
+                    m = re.search(r'\d+', str(val))
+                    return int(m.group()) if m else 999
+                urutan_final = sorted(df_clean[pilihan_x].unique(), key=sorter)
+
+            # --- LANGKAH 4: ATUR TAMPILAN & GAMBAR ---
+            st.divider()
+            st.subheader("2. Atur Grafik")
+            
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                w_fig = st.slider("Lebar", 3.0, 8.0, 5.0)
+            with c2:
+                h_fig = st.slider("Tinggi", 3.0, 8.0, 4.0)
+            with c3:
+                seed_val = st.number_input("Acak Posisi (Seed)", value=42)
+                jitter_val = st.slider("Jitter", 0.0, 0.3, 0.12)
+
+            # --- GAMBAR (Matplotlib gaya R) ---
+            fig, ax = plt.subplots(figsize=(w_fig, h_fig))
+            
+            # Tema Putih + Border Abu
+            ax.set_facecolor('white')
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color('#595959')
+                spine.set_linewidth(1)
+
+            # Boxplot
+            sns.boxplot(
+                data=df_clean, x=pilihan_x, y=pilihan_y, order=urutan_final, ax=ax,
+                width=0.65, showfliers=False,
+                boxprops=dict(facecolor='#CCCCCC', edgecolor='#595959', linewidth=0.9),
+                whiskerprops=dict(color='#595959', linewidth=0.9),
+                capprops=dict(color='#595959', linewidth=0.9),
+                medianprops=dict(color='#595959', linewidth=2)
+            )
+
+            # Jitter Points
+            np.random.seed(seed_val)
+            sns.stripplot(
+                data=df_clean, x=pilihan_x, y=pilihan_y, order=urutan_final, ax=ax,
+                jitter=jitter_val, size=7,
+                edgecolor='red', linewidth=0.7,
+                color='orange', alpha=0.9,
+                marker='o'
+            )
+
+            # Labels
+            ax.set_xlabel(pilihan_x, fontweight='bold', color='black')
+            ax.set_ylabel(pilihan_y, fontweight='bold', color='black')
+            ax.tick_params(colors='black')
+
+            st.pyplot(fig)
+
+            # Download
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+            buf.seek(0)
+            st.download_button("⬇️ Download Gambar PNG", buf, "grafik_fix.png", "image/png")
+
+    except Exception as e:
+        st.error(f"Terjadi error: {e}")
+        st.warning("Coba ganti nomor baris judul di atas.")
+
+else:
+    st.info("Upload file Excel Bapak dulu.")
