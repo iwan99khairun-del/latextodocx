@@ -8,3 +8,5 @@ seaborn
 opencv-python-headless
 numpy
 Pillow
+scipy
+statsmodels
