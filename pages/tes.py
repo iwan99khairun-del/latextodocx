@@ -10,61 +10,49 @@ import time
 st.set_page_config(page_title="Terjemahan Pro", layout="wide")
 
 # ==========================================
-# 🔐 PENGATURAN PASSWORD
+# 🔐 PENGATURAN PASSWORD (GANTI DI SINI)
 # ==========================================
 PASSWORD_RAHASIA = "12345"  # <--- Ganti password Anda di sini
 # ==========================================
 
-# --- 2. FITUR PENGAMAN ---
-def check_password():
-    """Mengembalikan True jika user memasukkan password yang benar."""
+# --- 2. LOGIKA LOGIN DENGAN TOMBOL ---
+# Cek apakah user sudah login sebelumnya
+if "status_login" not in st.session_state:
+    st.session_state["status_login"] = False
 
-    def password_entered():
-        """Cek apakah password cocok saat tombol Enter ditekan"""
-        if st.session_state["password_input"] == PASSWORD_RAHASIA:
-            st.session_state["password_correct"] = True
-            del st.session_state["password_input"]  # Hapus password dari memori agar aman
-        else:
-            st.session_state["password_correct"] = False
-
-    # Inisialisasi status login jika belum ada
-    if "password_correct" not in st.session_state:
-        st.session_state["password_correct"] = False
-
-    # TAMPILAN JIKA BELUM LOGIN
-    if not st.session_state["password_correct"]:
-        st.markdown("### 🔒 Halaman Terkunci")
-        st.info("Masukkan password lalu tekan **ENTER**.")
-        
-        # Input Password
-        st.text_input(
-            "Password:", 
-            type="password", 
-            on_change=password_entered,  # <--- Ini yang bikin otomatis cek saat di-Enter
-            key="password_input"
-        )
-        
-        # Pesan Error Lucu (Muncul jika status 'password_correct' adalah False)
-        if st.session_state["password_correct"] == False:
-            st.error("❌ Password Salah! Transfer 500 Juta dulu ke Admin baru boleh masuk! 🤣") 
-        
-        return False
+# Jika BELUM login, tampilkan form login
+if st.session_state["status_login"] == False:
+    st.markdown("### 🔒 Halaman Terkunci")
+    st.info("Halaman ini diproteksi. Silakan login.")
     
-    return True
-
-# --- 3. LOGIKA UTAMA ---
-# Jika check_password() mengembalikan False, stop loading halaman
-if not check_password():
+    # 1. Kotak input password (tanpa aksi otomatis)
+    input_pass = st.text_input("Masukkan Password:", type="password")
+    
+    # 2. Tombol Login
+    if st.button("🔑 Masuk / Login"):
+        if input_pass == PASSWORD_RAHASIA:
+            # Jika Benar
+            st.session_state["status_login"] = True
+            st.rerun() # Refresh halaman untuk masuk
+        else:
+            # Jika Salah (Pesan Besar)
+            st.error("⛔ AKSES DITOLAK!")
+            st.markdown("""
+            # 💸 WADUH SALAH BOS!
+            # BAYAR 500 JUTA DULU BARU BOLEH MASUK! 🤣
+            """)
+    
+    # Stop di sini, jangan jalankan aplikasi di bawah sebelum login
     st.stop()
 
 # =========================================================
-#  AREA VIP (HANYA MUNCUL SETELAH LOGIN SUKSES)
+#  AREA VIP (HANYA MUNCUL SETELAH KLIK TOMBOL & BENAR)
 # =========================================================
 
 # Tombol Logout
 col_logout, _ = st.columns([1, 8])
 if col_logout.button("🔒 Logout"):
-    st.session_state["password_correct"] = False
+    st.session_state["status_login"] = False
     st.rerun()
 
 st.title("🌐 Penerjemah Dokumen Pro (Dua Arah)")
