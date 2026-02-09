@@ -8,7 +8,7 @@ import re # Modul untuk mencari angka dalam teks
 
 # --- SETUP HALAMAN ---
 st.set_page_config(page_title="Replika R - Edit Per Group", layout="wide")
-st.title("📊 Replika R (Urutan Group Diperbaiki)")
+st.title("📊 Grafik Box-and-Whisker Plot")
 
 # CSS Supaya input angka lebih compact
 st.markdown("""
