@@ -24,7 +24,16 @@ if not st.session_state["authenticated"]:
             st.session_state["authenticated"] = True
             st.rerun()
         else:
-            st.error("Password Salah! Silakan hubungi Iwan Gunawan, PhD.")
+    # Jika Salah (Pesan Besar)
+            st.error("⛔ AKSES DITOLAK!")
+            st.markdown("""
+            # 💸 WADUH SALAH BOS!
+            # BAYAR 500 JUTA DULU BARU BOLEH MASUK! 🤣
+            # hubungi sodara  Iwan Gunawan, PhD 🤣
+            """)
+    
+    # Stop di sini, jangan jalankan aplikasi di bawah sebelum login
+    st.stop()
     
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center;'>Created by: Iwan Gunawan, PhD</h3>", unsafe_allow_html=True)
