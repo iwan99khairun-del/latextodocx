@@ -8,7 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # --- 1. Konfigurasi Halaman ---
 st.set_page_config(page_title="Studio Grafik Pro+", layout="wide")
-st.title("📊 Studio Grafik Pro: Grfik untuk Jurnal resolusi tinggi")
+st.title("📊 Grafik Pro: Grafik untuk Jurnal resolusi tinggi")
 st.markdown("""
 Fitur Baru: **Stock Chart** (OHLC/HLC) & **Surface** (Filled/Wireframe/Contour) + Anti Crash.
 """)
