@@ -127,7 +127,7 @@ if uploaded_file is not None:
             # --- FINISHING ---
             st.divider()
             tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
-            dpi = st.number_input("Resolusi Download (DPI)", 100, 900, 300)
+            dpi = st.number_input("Resolusi Download (DPI)", 100, 901, 300)
 
             if tampilkan_grid and "Pie" not in chart_category and "Heatmap" not in chart_category:
                 ax.grid(True, linestyle='--', alpha=0.5)
