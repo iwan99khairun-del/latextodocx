@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 st.set_page_config(page_title="Studio Grafik Pro+", layout="wide")
 st.title("📊 Grafik Pro: Grafik untuk Jurnal resolusi tinggi")
 st.markdown("""
-Fitur Baru: **Stock Chart** (OHLC/HLC) & **Surface** (Filled/Wireframe/Contour) + Anti Crash.
+Fitur Baru: **Combo Chart (Bar + Line)**, **Multi-Z Surface** & **Stock Chart**.
 """)
 
 # --- 2. Fungsi Load Data ---
@@ -53,6 +53,7 @@ if uploaded_file is not None:
                 "Pilih Jenis Grafik",
                 [
                     "📈 Line Chart (Dual Axis)", 
+                    "📊 + 📈 Combo Chart (Bar + Line)", # <--- BARU
                     "🕯️ Stock Chart (Saham)",       
                     "🏔️ Surface Chart (3D/Contour)", 
                     "🧊 3D Line Chart", 
@@ -67,6 +68,7 @@ if uploaded_file is not None:
             
             # Inisialisasi Figure Default
             fig = plt.figure(figsize=(10, 6))
+            ax = None # Reset ax
             
             # ==========================================
             # A. LOGIKA STOCK CHART
@@ -133,7 +135,7 @@ if uploaded_file is not None:
                     plt.xticks(rotation=45)
 
             # ==========================================
-            # B. LOGIKA SURFACE CHART (ANTI CRASH)
+            # B. LOGIKA SURFACE CHART (MULTI Z + ANTI CRASH)
             # ==========================================
             elif chart_type == "🏔️ Surface Chart (3D/Contour)":
                 surf_style = st.selectbox(
@@ -141,56 +143,73 @@ if uploaded_file is not None:
                     ["🌈 Filled Surface (Isi)", "🕸️ Wireframe (Jaring)", "🗺️ Contour (Peta 2D)"]
                 )
                 
-                c_x, c_y, c_z = st.columns(3)
-                with c_x: x_axis = st.selectbox("Sumbu X", columns, key="sx")
-                with c_y: y_axis = st.selectbox("Sumbu Y", columns, key="sy")
-                with c_z: z_axis = st.selectbox("Sumbu Z", columns, key="sz")
+                # Layout Input
+                c_x, c_y = st.columns(2)
+                with c_x: x_axis = st.selectbox("Sumbu X (Satu Kolom)", columns, key="sx")
+                with c_y: y_axis = st.selectbox("Sumbu Y (Satu Kolom)", columns, key="sy")
                 
-                cmap_choice = st.selectbox("Warna", ["viridis", "plasma", "coolwarm", "terrain", "ocean"])
+                # Multi Select untuk Z
+                z_axis_list = st.multiselect("Sumbu Z (Bisa Banyak Variable)", columns, key="sz")
+                
+                cmap_choice = st.selectbox("Warna Dasar", ["viridis", "plasma", "coolwarm", "terrain", "ocean"])
 
-                if x_axis and y_axis and z_axis:
+                if x_axis and y_axis and z_axis_list:
                     if x_axis == y_axis:
-                        st.warning("⚠️ Sumbu X dan Y harus berbeda kolom.")
+                        st.warning("⚠️ Sumbu X dan Y sebaiknya berbeda kolom agar membentuk lantai/grid.")
                     else:
-                        # Konversi Data
-                        df[x_axis] = pd.to_numeric(df[x_axis], errors='coerce')
-                        df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
-                        df[z_axis] = pd.to_numeric(df[z_axis], errors='coerce')
-                        df_surf = df.dropna(subset=[x_axis, y_axis, z_axis])
+                        # 1. Setup Canvas
+                        if surf_style == "🗺️ Contour (Peta 2D)":
+                            ax = fig.add_subplot(111)
+                        else:
+                            ax = fig.add_subplot(111, projection='3d')
 
                         try:
-                            if surf_style == "🗺️ Contour (Peta 2D)":
-                                ax = fig.add_subplot(111)
-                                cntr = ax.tricontourf(df_surf[x_axis], df_surf[y_axis], df_surf[z_axis], levels=14, cmap=cmap_choice)
-                                fig.colorbar(cntr, ax=ax, label=z_axis)
-                                ax.set_title(f"Contour: {z_axis}")
-                            
-                            elif surf_style == "🕸️ Wireframe (Jaring)":
-                                ax = fig.add_subplot(111, projection='3d')
-                                ax.plot_trisurf(
-                                    df_surf[x_axis], df_surf[y_axis], df_surf[z_axis], 
-                                    color=(1,1,1,0), edgecolor='black', linewidth=0.5
-                                )
-                                ax.set_title(f"Wireframe: {z_axis}")
+                            # 2. Loop untuk setiap variabel Z yang dipilih
+                            for i, z_col in enumerate(z_axis_list):
+                                # Pastikan Numeric
+                                df[x_axis] = pd.to_numeric(df[x_axis], errors='coerce')
+                                df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
+                                df[z_col] = pd.to_numeric(df[z_col], errors='coerce')
                                 
-                            else: 
-                                ax = fig.add_subplot(111, projection='3d')
-                                surf = ax.plot_trisurf(
-                                    df_surf[x_axis], df_surf[y_axis], df_surf[z_axis], 
-                                    cmap=cmap_choice, edgecolor='none', alpha=0.9
-                                )
-                                fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5, label=z_axis)
-                                ax.set_title(f"Surface: {z_axis}")
+                                # Drop NaN khusus untuk triplet ini
+                                df_surf = df.dropna(subset=[x_axis, y_axis, z_col])
 
-                            if surf_style != "🗺️ Contour (Peta 2D)":
-                                ax.set_zlabel(z_axis)
-                            
+                                # Tentukan Colormap (Agar berbeda jika ada >1 Z)
+                                current_cmap = cmap_choice if len(z_axis_list) == 1 else None
+                                if len(z_axis_list) > 1:
+                                    alpha_val = 0.6
+                                else:
+                                    alpha_val = 0.9
+
+                                # --- PLOTTING ---
+                                if surf_style == "🗺️ Contour (Peta 2D)":
+                                    cntr = ax.tricontourf(df_surf[x_axis], df_surf[y_axis], df_surf[z_col], levels=14, cmap=cmap_choice, alpha=alpha_val)
+                                    if i == 0: fig.colorbar(cntr, ax=ax, label=z_col) 
+                                
+                                elif surf_style == "🕸️ Wireframe (Jaring)":
+                                    ax.plot_trisurf(
+                                        df_surf[x_axis], df_surf[y_axis], df_surf[z_col], 
+                                        color=(1,1,1,0), edgecolor=f'C{i}', linewidth=0.8, label=z_col
+                                    )
+                                    
+                                else: # Filled Surface
+                                    surf = ax.plot_trisurf(
+                                        df_surf[x_axis], df_surf[y_axis], df_surf[z_col], 
+                                        cmap=current_cmap, edgecolor='none', alpha=alpha_val, label=z_col
+                                    )
+                                    if len(z_axis_list) == 1:
+                                        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5, label=z_col)
+
+                            # 3. Labeling
+                            ax.set_title(f"Surface: {', '.join(z_axis_list)}")
                             ax.set_xlabel(x_axis)
                             ax.set_ylabel(y_axis)
+                            if surf_style != "🗺️ Contour (Peta 2D)":
+                                ax.set_zlabel("Values")
 
                         except Exception as e:
                             st.error("⛔ Gagal membuat Surface.")
-                            st.info("Penyebab: Data X dan Y mungkin membentuk garis lurus (segaris). Harap pilih kolom X dan Y yang datanya menyebar (tidak identik/berhubungan linear sempurna).")
+                            st.info(f"Detail Error: {e}. \n\nTips: Pastikan data X dan Y tidak membentuk garis lurus sempurna.")
 
             # ==========================================
             # C. CHART LAINNYA
@@ -198,7 +217,59 @@ if uploaded_file is not None:
             else:
                 ax = fig.add_subplot(111)
                 
-                if chart_type == "📈 Line Chart (Dual Axis)":
+                # --- COMBO CHART (BARU) ---
+                if chart_type == "📊 + 📈 Combo Chart (Bar + Line)":
+                    st.info("Tips: Pilih kolom untuk Bar (kiri) dan Line (kanan).")
+                    
+                    x_axis = st.selectbox("Sumbu X", columns, key="combo_x")
+                    
+                    col_bar, col_line = st.columns(2)
+                    with col_bar:
+                        bar_cols = st.multiselect("Data Batang (Bar) - Sumbu Kiri", [c for c in columns if c!=x_axis], key="combo_bar")
+                    with col_line:
+                        line_cols = st.multiselect("Data Garis (Line) - Sumbu Kanan", [c for c in columns if c!=x_axis], key="combo_line")
+                    
+                    if x_axis and (bar_cols or line_cols):
+                        # Setup X (String/Category)
+                        x_data = df[x_axis].astype(str).values 
+                        x_indexes = np.arange(len(x_data))
+                        
+                        # Plot BARS
+                        if bar_cols:
+                            ax.set_ylabel("Nilai Batang", color="tab:blue")
+                            ax.tick_params(axis='y', labelcolor="tab:blue")
+                            
+                            width = 0.8 / len(bar_cols) # Lebar dinamis
+                            for i, col in enumerate(bar_cols):
+                                # Hitung posisi agar bar berjejer (clustered)
+                                offset = (i - len(bar_cols)/2) * width + (width/2)
+                                ax.bar(x_indexes + offset, df[col], width=width, label=col, alpha=0.7)
+                            
+                            ax.legend(loc='upper left', title="Bar")
+
+                        # Plot LINES (Dual Axis)
+                        if line_cols:
+                            # Jika ada bar, buat twinx, jika tidak pakai ax utama
+                            ax_line = ax.twinx() if bar_cols else ax
+                            
+                            if bar_cols: # Jika mode combo
+                                ax_line.set_ylabel("Nilai Garis", color="tab:red")
+                                ax_line.tick_params(axis='y', labelcolor="tab:red")
+                            
+                            colors = ['tab:red', 'tab:orange', 'tab:green', 'purple']
+                            for i, col in enumerate(line_cols):
+                                c = colors[i % len(colors)]
+                                ax_line.plot(x_indexes, df[col], marker='o', linewidth=2, color=c, label=col)
+                            
+                            ax_line.legend(loc='upper right', title="Line")
+
+                        # Rapikan Sumbu X
+                        ax.set_xticks(x_indexes)
+                        ax.set_xticklabels(x_data, rotation=45, ha='right')
+                        ax.set_xlabel(x_axis)
+
+                # --- CHART STANDAR ---
+                elif chart_type == "📈 Line Chart (Dual Axis)":
                     x_axis = st.selectbox("Sumbu X", columns)
                     c_l, c_r = st.columns(2)
                     with c_l: y_left = st.multiselect("Sumbu Kiri", [c for c in columns if c!=x_axis])
@@ -251,12 +322,13 @@ if uploaded_file is not None:
             tampilkan_grid = st.checkbox("Grid", value=True)
             dpi = st.number_input("Resolusi (DPI)", 100, 900, 300)
             
-            if tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap"]:
+            # Terapkan Grid hanya jika ax sudah didefinisikan
+            if ax is not None and tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap"]:
                 try: ax.grid(True, linestyle='--', alpha=0.5)
                 except: pass
             
-            # Legend
-            if chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🏔️ Surface Chart (3D/Contour)"]:
+            # Legend Umum (kecuali Combo dan Pie punya logic sendiri)
+            if ax is not None and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "📊 + 📈 Combo Chart (Bar + Line)"]:
                 try: ax.legend(loc='best')
                 except: pass
 
