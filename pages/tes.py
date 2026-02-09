@@ -2,100 +2,75 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import io
+import numpy as np
 import re
 
-# --- SETTING HALAMAN ---
-st.set_page_config(page_title="Grafik Rapi Final", layout="wide")
-st.title("🌱 Grafik Boxplot + Swarm (Rapi & Tetap)")
+st.set_page_config(page_title="Pencari Posisi Titik", layout="wide")
+st.title("🎯 Alat Pencari Posisi Titik (Agar Sama Persis)")
 
-# --- FUNGSI BACA DATA SPESIFIK FILE BAPAK ---
-def load_data_special(file):
+# --- 1. BACA DATA (KHUSUS FILE BAPAK) ---
+@st.cache_data
+def load_data(file):
     try:
-        # 1. Baca dengan header di baris ke-2 (Index 1) karena baris 1 kosong
         if file.name.endswith('.csv'):
-            df = pd.read_csv(file, header=1)
+            df = pd.read_csv(file, header=1) # Lewati baris 1 kosong
         else:
-            df = pd.read_excel(file, header=1)
+            df = pd.read_excel(file, header=1) # Lewati baris 1 kosong
             
-        # 2. HAPUS KOLOM KOSONG (KOLOM A)
-        # Cari kolom yang namanya ada isinya (bukan Unnamed)
-        cols_valid = [c for c in df.columns if "Unnamed" not in str(c)]
-        df = df[cols_valid]
-        
-        # 3. Hapus baris kosong
-        df = df.dropna()
-        
+        # Hapus kolom kosong (Unnamed)
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
+        df = df.dropna(how='all') # Hapus baris kosong
         return df
-    except Exception as e:
+    except:
         return None
 
-# Fungsi urutkan dosis (0, 5, 10...)
-def sort_doses(val):
-    search = re.search(r'\d+', str(val))
-    return int(search.group()) if search else 999
-
-# --- PROGRAM UTAMA ---
-uploaded_file = st.file_uploader("Upload File Excel Bapak", type=["xlsx", "csv"])
+# --- 2. PROGRAM UTAMA ---
+uploaded_file = st.file_uploader("Upload File Excel", type=["xlsx", "csv"])
 
 if uploaded_file:
-    df = load_data_special(uploaded_file)
+    df = load_data(uploaded_file)
     
     if df is not None and len(df.columns) >= 2:
-        # Ambil 2 kolom pertama yang tersisa (Pasti Dosis & Angka)
-        col_x = df.columns[0] # Irradiation Doses
-        col_y = df.columns[1] # Diversity_Genetic
+        # Ambil 2 kolom pertama
+        col_x = df.columns[0] # Dosis
+        col_y = df.columns[1] # Nilai
         
-        # Pastikan kolom ke-2 adalah angka
+        # Pastikan kolom nilai jadi angka
         df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
-        
-        # Urutkan Dosis (Biar 0 di kiri, 20 di kanan)
-        urutan = sorted(df[col_x].unique(), key=sort_doses)
-        
-        # --- PENGATURAN TAMPILAN ---
-        c1, c2 = st.columns([1, 3])
-        
-        with c1:
-            st.success("✅ Data Bersih!")
-            st.write(f"**X:** {col_x}")
-            st.write(f"**Y:** {col_y}")
-            
-            st.divider()
-            point_size = st.slider("Ukuran Titik", 3, 10, 6)
-            st.info("Mode: **Swarm Plot**\n(Titik otomatis diatur rapi dan tidak akan berubah posisi/acak).")
 
-        with c2:
-            # --- GAMBAR GRAFIK ---
+        # --- PANEL PENGATUR (SIDEBAR) ---
+        with st.sidebar:
+            st.header("🎛️ KENDALI TITIK")
+            st.write("Ubah angka di bawah ini sampai posisi titik **SAMA** dengan contoh Bapak.")
+            
+            # 1. NOMOR GAYA (SEED) - INI KUNCINYA
+            seed_key = st.number_input("1. NOMOR GAYA (Ganti-ganti angka ini!)", 
+                                       value=42, step=1, 
+                                       help="Setiap angka menghasilkan posisi titik yang berbeda.")
+            
+            # 2. LEBAR SEBARAN
+            width_val = st.slider("2. Lebar Sebaran", 0.05, 0.40, 0.15, step=0.01)
+            
+            # 3. UKURAN TITIK
+            size_val = st.slider("3. Besar Titik", 3, 10, 6)
+            
+            st.warning("Tips: Klik tanda (+) atau (-) pada 'Nomor Gaya' perlahan-lahan sambil melihat gambar.")
+
+        # --- AREA GAMBAR ---
+        col_main, _ = st.columns([3, 1])
+        with col_main:
             fig, ax = plt.subplots(figsize=(8, 6))
             
-            # 1. Boxplot (Kotak) - Warna Putih/Transparan biar bersih
-            sns.boxplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
-                        color="white",  # Kotak putih
-                        linecolor="black", # Garis hitam
-                        showfliers=False, # Hapus outlier (karena sudah ada titik)
-                        width=0.5)
+            # Urutan Dosis
+            def urutkan(t):
+                cari = re.search(r'\d+', str(t))
+                return int(cari.group()) if cari else 999
+            urutan = sorted(df[col_x].unique(), key=urutkan)
             
-            # 2. Swarmplot (Titik Rapi)
-            # Ini kuncinya: Swarmplot menyusun titik agar tidak tumpang tindih
-            # Tanpa perlu random/acak, jadi posisinya PASTI TETAP.
-            sns.swarmplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
-                          size=point_size, palette="Set1", edgecolor="gray", linewidth=0.5)
-            
-            # Perbagus Tampilan
-            ax.set_xlabel(col_x, fontweight='bold', fontsize=11)
-            ax.set_ylabel(col_y, fontweight='bold', fontsize=11)
-            ax.grid(True, axis='y', linestyle='--', alpha=0.3)
-            ax.set_title(f"Distribusi {col_y} per {col_x}", fontsize=14)
-            
-            st.pyplot(fig)
-            
-            # Download
-            buf = io.BytesIO()
-            fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-            buf.seek(0)
-            st.download_button("⬇️ Download Gambar Rapi (High Res)", buf, "grafik_rapi.png", "image/png")
-            
-    else:
-        st.error("Format file tidak sesuai. Pastikan ada Header di baris ke-2.")
-else:
-    st.info("Silakan upload file.")
+            # --- BAGIAN AJAIB (PENGUNCI) ---
+            # Apapun angkanya, kuncinya dipasang di sini
+            np.random.seed(seed_key) 
+            # -------------------------------
+
+            # Gambar Boxplot
+            sns.boxplot(data=df, x=col_x, y=
