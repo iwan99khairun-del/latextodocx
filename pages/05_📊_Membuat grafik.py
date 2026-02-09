@@ -5,9 +5,12 @@ import seaborn as sns
 import io
 
 # --- 1. Konfigurasi Halaman ---
-st.set_page_config(page_title="Studio Grafik Pro", layout="wide")
-st.title("📊 Studio Grafik Pro: All-in-One (cocok untuk jurnal)")
-st.write("Upload Excel, pilih jenis visualisasi, dan download hasilnya.")
+st.set_page_config(page_title="Studio Grafik Dual-Axis", layout="wide")
+st.title("📊 Studio Grafik Pro: Dual Axis Support")
+st.markdown("""
+Fitur Baru: **Dual Y-Axis**. Sekarang Bapak bisa memplot data dengan satuan berbeda (misal: Tekanan vs RPM) 
+di sumbu Kiri dan Kanan sekaligus.
+""")
 
 # --- 2. Fungsi Load Data ---
 @st.cache_data
@@ -16,6 +19,7 @@ def load_data(file):
         df_raw = pd.read_excel(file)
         # Pembersihan Data (Hapus baris satuan jika ada)
         first_val = df_raw.iloc[0, 0]
+        # Cek jika baris pertama adalah string/huruf (bukan angka)
         if isinstance(first_val, str) and not str(first_val).replace('.', '', 1).isdigit():
             df = df_raw.drop(index=0).reset_index(drop=True)
         else:
@@ -36,104 +40,104 @@ if uploaded_file is not None:
     if df is not None:
         columns = df.columns.tolist()
         
-        # Layout 2 Kolom
+        # Layout
         col_settings, col_preview = st.columns([1, 2])
         
         with col_settings:
             st.header("⚙️ Pengaturan")
             
-            # PILIH JENIS GRAFIK
-            chart_category = st.selectbox(
+            # Pilihan Jenis Grafik
+            chart_type = st.selectbox(
                 "Pilih Jenis Grafik",
-                [
-                    "📈 Line & Area (Tren)", 
-                    "📊 Bar & Column (Perbandingan)", 
-                    "🔵 Scatter Plot (Hubungan)", 
-                    "🥧 Pie & Donut (Komposisi)", 
-                    "📦 Box & Histogram (Distribusi)",
-                    "🔥 Heatmap (Korelasi)"
-                ]
+                ["📈 Line Chart (Dual Axis)", "📊 Bar Chart", "🔵 Scatter Plot", "🥧 Pie Chart", "🔥 Heatmap"]
             )
             
             st.divider()
             
-            # --- LOGIKA UI DINAMIS ---
             fig, ax = plt.subplots(figsize=(10, 6))
             
-            # 1. LINE & AREA
-            if "Line & Area" in chart_category:
-                chart_type = st.radio("Style", ["Line Chart", "Area Chart"])
+            # --- LOGIKA KHUSUS DUAL AXIS (LINE CHART) ---
+            if chart_type == "📈 Line Chart (Dual Axis)":
+                st.info("Mode ini memungkinkan Sumbu Kiri dan Kanan berbeda skala.")
+                
+                x_axis = st.selectbox("Pilih Sumbu X (Horizontal)", columns)
+                
+                # Input untuk Sumbu Kiri & Kanan
+                col_y1, col_y2 = st.columns(2)
+                with col_y1:
+                    y_left = st.multiselect("Sumbu Y Kiri (Utama)", [c for c in columns if c != x_axis])
+                with col_y2:
+                    y_right = st.multiselect("Sumbu Y Kanan (Sekunder)", [c for c in columns if c != x_axis and c not in y_left])
+
+                # Logic Plotting Dual Axis
+                if x_axis and (y_left or y_right):
+                    # 1. Plot Sumbu Kiri (Ax1)
+                    if y_left:
+                        ax.set_xlabel(x_axis)
+                        ax.set_ylabel("Sumbu Kiri", color="tab:blue")
+                        for col in y_left:
+                            # Garis Solid untuk Kiri
+                            ax.plot(df[x_axis], df[col], label=f"{col} (Kiri)", linestyle='-', marker='o')
+                        ax.tick_params(axis='y', labelcolor="tab:blue")
+
+                    # 2. Plot Sumbu Kanan (Ax2) - KUNCINYA DI SINI
+                    if y_right:
+                        ax2 = ax.twinx()  # Membuat kembaran sumbu X tapi Y-nya beda
+                        ax2.set_ylabel("Sumbu Kanan", color="tab:red")
+                        for col in y_right:
+                            # Garis Putus-putus untuk Kanan (biar beda)
+                            ax2.plot(df[x_axis], df[col], label=f"{col} (Kanan)", color='tab:red', linestyle='--', marker='x')
+                        ax2.tick_params(axis='y', labelcolor="tab:red")
+                    
+                    # Judul
+                    ax.set_title(f"Grafik Dual Axis: {x_axis}", pad=20)
+
+            # --- LOGIKA GRAFIK LAINNYA (Standar) ---
+            elif chart_type == "📊 Bar Chart":
                 x_axis = st.selectbox("Sumbu X", columns)
                 y_axis = st.multiselect("Sumbu Y", [c for c in columns if c != x_axis])
-                
                 if x_axis and y_axis:
-                    if chart_type == "Line Chart":
-                        for col in y_axis:
-                            ax.plot(df[x_axis], df[col], marker='o', label=col)
-                    else:
-                        df.plot(kind='area', x=x_axis, y=y_axis, ax=ax, alpha=0.5)
+                    df.plot(kind='bar', x=x_axis, y=y_axis, ax=ax)
+                    ax.set_ylabel("Nilai")
 
-            # 2. BAR CHART
-            elif "Bar & Column" in chart_category:
-                orientasi = st.radio("Orientasi", ["Vertikal", "Horizontal"])
-                x_axis = st.selectbox("Sumbu Label", columns)
-                y_axis = st.multiselect("Sumbu Data", [c for c in columns if c != x_axis])
-                
-                if x_axis and y_axis:
-                    kind = 'bar' if orientasi == "Vertikal" else 'barh'
-                    df.plot(kind=kind, x=x_axis, y=y_axis, ax=ax)
-
-            # 3. SCATTER PLOT
-            elif "Scatter" in chart_category:
+            elif chart_type == "🔵 Scatter Plot":
                 x_axis = st.selectbox("Sumbu X", columns)
                 y_axis = st.multiselect("Sumbu Y", [c for c in columns if c != x_axis])
-                
                 if x_axis and y_axis:
                     for col in y_axis:
                         ax.scatter(df[x_axis], df[col], label=col, alpha=0.7)
 
-            # 4. PIE CHART
-            elif "Pie" in chart_category:
+            elif chart_type == "🥧 Pie Chart":
                 label_col = st.selectbox("Label", columns)
                 value_col = st.selectbox("Nilai", [c for c in columns if c != label_col])
-                donut = st.checkbox("Donut Chart?")
-                
                 if label_col and value_col:
                     data_pie = df.groupby(label_col)[value_col].sum()
-                    if donut:
-                        ax.pie(data_pie, labels=data_pie.index, autopct='%1.1f%%', wedgeprops={'width':0.4})
-                    else:
-                        ax.pie(data_pie, labels=data_pie.index, autopct='%1.1f%%')
+                    ax.pie(data_pie, labels=data_pie.index, autopct='%1.1f%%')
 
-            # 5. DISTRIBUSI
-            elif "Box" in chart_category:
-                dist_type = st.radio("Tipe", ["Histogram", "Box Plot", "Violin Plot"])
-                target_cols = st.multiselect("Pilih Data", columns)
-                
-                if target_cols:
-                    if dist_type == "Histogram":
-                        for col in target_cols:
-                            sns.histplot(df[col], kde=True, ax=ax, label=col)
-                    elif dist_type == "Box Plot":
-                        sns.boxplot(data=df[target_cols], ax=ax, orient='h')
-                    elif dist_type == "Violin Plot":
-                        sns.violinplot(data=df[target_cols], ax=ax, orient='h')
-
-            # 6. HEATMAP
-            elif "Heatmap" in chart_category:
+            elif chart_type == "🔥 Heatmap":
                 sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-                ax.set_title("Korelasi Data")
+                ax.set_title("Matriks Korelasi")
 
-            # --- FINISHING ---
+            # --- FINISHING & LEGENDA ---
             st.divider()
             tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
-            dpi = st.number_input("Resolusi Download (DPI)", 100, 901, 300)
+            dpi = st.number_input("Resolusi (DPI)", 100, 600, 300)
 
-            if tampilkan_grid and "Pie" not in chart_category and "Heatmap" not in chart_category:
+            # Grid & Legend Pintar
+            if tampilkan_grid and "Pie" not in chart_type and "Heatmap" not in chart_type:
                 ax.grid(True, linestyle='--', alpha=0.5)
             
-            if "Heatmap" not in chart_category and "Pie" not in chart_category:
-                 ax.legend(bbox_to_anchor=(1, 1), loc='upper left')
+            # Menggabungkan Legenda Kiri & Kanan menjadi satu kotak
+            if chart_type == "📈 Line Chart (Dual Axis)" and (y_left or y_right):
+                # Trik menggabungkan legend dari 2 sumbu berbeda
+                lines1, labels1 = ax.get_legend_handles_labels()
+                if 'ax2' in locals(): # Kalau sumbu kanan aktif
+                    lines2, labels2 = ax2.get_legend_handles_labels()
+                    ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left', bbox_to_anchor=(1.05, 1))
+                else:
+                    ax.legend(loc='upper left', bbox_to_anchor=(1.05, 1))
+            elif "Pie" not in chart_type and "Heatmap" not in chart_type:
+                ax.legend(bbox_to_anchor=(1, 1))
 
         # --- 4. PREVIEW & DOWNLOAD ---
         with col_preview:
@@ -147,11 +151,11 @@ if uploaded_file is not None:
             st.download_button(
                 label=f"⬇️ Download Grafik ({dpi} DPI)",
                 data=buf,
-                file_name="grafik_pro.png",
+                file_name="grafik_dual_axis.png",
                 mime="image/png",
                 use_container_width=True
             )
     else:
-        st.error("Format data Excel tidak valid atau kosong.")
+        st.error("Format data Excel tidak valid.")
 else:
-    st.info("👋 Silakan upload file Excel di atas.")
+    st.info("👋 Upload file Excel untuk mencoba fitur Dual Axis.")
