@@ -2,102 +2,100 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
+import io
+import re
 
-st.set_page_config(page_title="Grafik Manual Total")
-st.title("🛠️ Mode Manual: Tunjuk Sendiri")
+# --- SETTING HALAMAN ---
+st.set_page_config(page_title="Grafik Rapi Final", layout="wide")
+st.title("🌱 Grafik Boxplot + Swarm (Rapi & Tetap)")
 
-uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
-
-if uploaded_file is not None:
-    # --- LANGKAH 1: BACA DATA MENTAH (TAMPILKAN APA ADANYA) ---
-    st.subheader("1. Cek Data Mentah")
+# --- FUNGSI BACA DATA SPESIFIK FILE BAPAK ---
+def load_data_special(file):
     try:
-        if uploaded_file.name.endswith('.csv'):
-            df_raw = pd.read_csv(uploaded_file, header=None)
+        # 1. Baca dengan header di baris ke-2 (Index 1) karena baris 1 kosong
+        if file.name.endswith('.csv'):
+            df = pd.read_csv(file, header=1)
         else:
-            df_raw = pd.read_excel(uploaded_file, header=None)
+            df = pd.read_excel(file, header=1)
             
-        st.write("Lihat tabel di bawah. Di baris nomor berapa tulisan **'Irradiation Doses'** berada?")
-        st.write("(Biasanya di baris 0, 1, atau 2)")
-        st.dataframe(df_raw.head(5))
+        # 2. HAPUS KOLOM KOSONG (KOLOM A)
+        # Cari kolom yang namanya ada isinya (bukan Unnamed)
+        cols_valid = [c for c in df.columns if "Unnamed" not in str(c)]
+        df = df[cols_valid]
         
-        # --- LANGKAH 2: PILIH BARIS JUDUL ---
-        row_header = st.number_input("Masukkan Nomor Baris Judul:", min_value=0, value=1, step=1)
+        # 3. Hapus baris kosong
+        df = df.dropna()
         
-        if st.button("✅ Pakai Baris Ini Sebagai Judul"):
-            # Baca ulang dengan header yang benar
-            if uploaded_file.name.endswith('.csv'):
-                uploaded_file.seek(0)
-                df = pd.read_csv(uploaded_file, header=row_header)
-            else:
-                df = pd.read_excel(uploaded_file, header=row_header)
-
-            # Bersihkan kolom hantu (Unnamed)
-            df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
-            
-            # Simpan di session state biar gak hilang
-            st.session_state['df_fixed'] = df
-            st.success("Header berhasil diatur!")
-
+        return df
     except Exception as e:
-        st.error(f"Gagal baca file: {e}")
+        return None
 
-    # --- LANGKAH 3: PILIH KOLOM & GAMBAR ---
-    if 'df_fixed' in st.session_state:
-        df = st.session_state['df_fixed']
-        cols = df.columns.tolist()
+# Fungsi urutkan dosis (0, 5, 10...)
+def sort_doses(val):
+    search = re.search(r'\d+', str(val))
+    return int(search.group()) if search else 999
+
+# --- PROGRAM UTAMA ---
+uploaded_file = st.file_uploader("Upload File Excel Bapak", type=["xlsx", "csv"])
+
+if uploaded_file:
+    df = load_data_special(uploaded_file)
+    
+    if df is not None and len(df.columns) >= 2:
+        # Ambil 2 kolom pertama yang tersisa (Pasti Dosis & Angka)
+        col_x = df.columns[0] # Irradiation Doses
+        col_y = df.columns[1] # Diversity_Genetic
         
-        st.divider()
-        st.subheader("2. Pilih Kolom & Atur Gambar")
+        # Pastikan kolom ke-2 adalah angka
+        df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
         
-        c1, c2 = st.columns(2)
+        # Urutkan Dosis (Biar 0 di kiri, 20 di kanan)
+        urutan = sorted(df[col_x].unique(), key=sort_doses)
+        
+        # --- PENGATURAN TAMPILAN ---
+        c1, c2 = st.columns([1, 3])
+        
         with c1:
-            col_x = st.selectbox("Pilih Kolom Dosis (Sumbu X):", cols)
+            st.success("✅ Data Bersih!")
+            st.write(f"**X:** {col_x}")
+            st.write(f"**Y:** {col_y}")
+            
+            st.divider()
+            point_size = st.slider("Ukuran Titik", 3, 10, 6)
+            st.info("Mode: **Swarm Plot**\n(Titik otomatis diatur rapi dan tidak akan berubah posisi/acak).")
+
         with c2:
-            col_y = st.selectbox("Pilih Kolom Angka (Sumbu Y):", cols)
+            # --- GAMBAR GRAFIK ---
+            fig, ax = plt.subplots(figsize=(8, 6))
             
-        # --- ATUR POSISI TITIK (BIAR SAMA PERSIS) ---
-        st.write("---")
-        st.write("🔐 **Kunci Posisi Titik**")
-        col_kunci, col_geser = st.columns(2)
-        with col_kunci:
-            seed_val = st.number_input("Kode Kunci (Ganti angka ini biar posisi berubah)", value=42)
-        with col_geser:
-            jitter_val = st.slider("Lebar Sebaran Titik", 0.0, 0.4, 0.15)
+            # 1. Boxplot (Kotak) - Warna Putih/Transparan biar bersih
+            sns.boxplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
+                        color="white",  # Kotak putih
+                        linecolor="black", # Garis hitam
+                        showfliers=False, # Hapus outlier (karena sudah ada titik)
+                        width=0.5)
             
-        # PROSES GAMBAR
-        if col_x and col_y:
-            try:
-                fig, ax = plt.subplots(figsize=(8, 6))
-                
-                # Paksa jadi angka
-                df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
-                
-                # Urutkan Dosis
-                import re
-                def cari_angka(t):
-                    res = re.search(r'\d+', str(t))
-                    return int(res.group()) if res else 999
-                
-                urutan = sorted(df[col_x].unique(), key=cari_angka)
-                
-                # KUNCI POSISI (SUPAYA TIDAK GOYANG/BEDA)
-                np.random.seed(seed_val)
-                
-                # 1. Gambar Boxplot
-                sns.boxplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, palette="Pastel1", showfliers=False)
-                
-                # 2. Gambar Titik (Strip Plot Terkunci)
-                sns.stripplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
-                              color='black', alpha=0.6, jitter=jitter_val, size=6)
-                
-                ax.set_xlabel(col_x, fontweight='bold')
-                ax.set_ylabel(col_y, fontweight='bold')
-                ax.grid(True, linestyle='--', alpha=0.5)
-                
-                st.pyplot(fig)
-                
-            except Exception as e:
-                st.error(f"Masih error saat menggambar: {e}")
-                st.write("Pastikan kolom Angka isinya benar-benar angka.")
+            # 2. Swarmplot (Titik Rapi)
+            # Ini kuncinya: Swarmplot menyusun titik agar tidak tumpang tindih
+            # Tanpa perlu random/acak, jadi posisinya PASTI TETAP.
+            sns.swarmplot(data=df, x=col_x, y=col_y, order=urutan, ax=ax, 
+                          size=point_size, palette="Set1", edgecolor="gray", linewidth=0.5)
+            
+            # Perbagus Tampilan
+            ax.set_xlabel(col_x, fontweight='bold', fontsize=11)
+            ax.set_ylabel(col_y, fontweight='bold', fontsize=11)
+            ax.grid(True, axis='y', linestyle='--', alpha=0.3)
+            ax.set_title(f"Distribusi {col_y} per {col_x}", fontsize=14)
+            
+            st.pyplot(fig)
+            
+            # Download
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+            buf.seek(0)
+            st.download_button("⬇️ Download Gambar Rapi (High Res)", buf, "grafik_rapi.png", "image/png")
+            
+    else:
+        st.error("Format file tidak sesuai. Pastikan ada Header di baris ke-2.")
+else:
+    st.info("Silakan upload file.")
