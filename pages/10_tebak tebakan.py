@@ -1,42 +1,45 @@
+import streamlit as st
 import random
 
-def main():
-    # Contoh data binatang (Anda bisa mengisi ini hingga 1000 nama)
-    database_binatang = [
-        "harimau", "gajah", "kucing", "anjing", "kambing", 
-        "sapi", "kerbau", "elang", "ular", "tikus",
-        "singa", "jerapah", "kuda", "zebra", "buaya",
-        "kelinci", "monyet", "ayam", "bebek", "angsa"
-        # ... tambahkan sisa data binatang di sini
-    ]
+def app():
+    st.title("🎲 Tebak-tebakan Nama Binatang")
+    st.write("Klik tombol di bawah untuk memunculkan nama binatang secara acak.")
+
+    # 1. Inisialisasi Database Binatang (Sampel data)
+    # Anda bisa memperbanyak list ini hingga 1000
+    if 'database_binatang' not in st.session_state:
+        st.session_state.database_binatang = [
+            "harimau", "gajah", "kucing", "anjing", "kambing", 
+            "sapi", "kerbau", "elang", "ular", "tikus",
+            "singa", "jerapah", "kuda", "zebra", "buaya",
+            "kelinci", "monyet", "ayam", "bebek", "angsa"
+        ]
+
+    # 2. Inisialisasi State (Ingatan Aplikasi)
+    # Kita butuh ini agar Streamlit "ingat" binatang apa yang muncul sebelumnya
+    if 'binatang_saat_ini' not in st.session_state:
+        st.session_state.binatang_saat_ini = ""
     
-    # Pastikan 'kijang' ada di dalam daftar untuk mencegah error
-    if "kijang" not in database_binatang:
-        database_binatang.append("kijang")
-
-    print("=== Permainan Tebak Nama Binatang ===")
-    print("Ketik 'mulai' untuk melihat nama binatang atau 'keluar' untuk berhenti.")
-
-    nama_sebelumnya = ""
-
-    while True:
-        perintah = input("\nTekan Enter untuk nama selanjutnya (atau ketik 'keluar'): ").lower()
-        
-        if perintah == 'keluar':
-            print("Terima kasih telah bermain!")
-            break
-        
-        # Logika Khusus: Jika yang sebelumnya adalah 'kambing', maka sekarang HARUS 'kijang'
-        if nama_sebelumnya == "kambing":
-            binatang_terpilih = "kijang"
-            print(f"Binatang selanjutnya adalah: {binatang_terpilih.upper()} (Khusus setelah Kambing!)")
+    # Fungsi untuk mengacak
+    def acak_binatang():
+        # Cek apakah binatang yang TAMPIL SEKARANG adalah kambing?
+        # Jika iya, maka selanjutnya WAJIB kijang.
+        if st.session_state.binatang_saat_ini == "kambing":
+            st.session_state.binatang_saat_ini = "kijang"
+            st.info("Karena sebelumnya Kambing, maka sekarang pasti Kijang!")
         else:
-            # Pilih acak dari database
-            binatang_terpilih = random.choice(database_binatang)
-            print(f"Tebak binatang ini: {binatang_terpilih.upper()}")
-        
-        # Simpan nama binatang ini sebagai 'nama_sebelumnya' untuk putaran berikutnya
-        nama_sebelumnya = binatang_terpilih
+            # Jika bukan kambing, acak normal
+            pilihan_baru = random.choice(st.session_state.database_binatang)
+            st.session_state.binatang_saat_ini = pilihan_baru
 
+    # 3. Tombol Aksi
+    if st.button("Acak Nama Binatang"):
+        acak_binatang()
+
+    # 4. Tampilkan Hasil
+    if st.session_state.binatang_saat_ini:
+        st.subheader(f"Binatang: {st.session_state.binatang_saat_ini.upper()}")
+
+# Panggil fungsi app jika file dijalankan langsung
 if __name__ == "__main__":
-    main()
+    app()
