@@ -3,14 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import io
-# Import toolkit 3D secara eksplisit (kadang diperlukan untuk versi matplotlib tertentu)
+import numpy as np
+# Import toolkit 3D
 from mpl_toolkits.mplot3d import Axes3D 
 
 # --- 1. Konfigurasi Halaman ---
-st.set_page_config(page_title="Studio Grafik Dual-Axis", layout="wide")
-st.title("📊 Studio Grafik Pro: Dual Axis & 3D Support")
+st.set_page_config(page_title="Studio Grafik Pro+", layout="wide")
+st.title("📊 Studio Grafik Pro: Stock & Surface 3D")
 st.markdown("""
-Fitur: **Dual Y-Axis** & **3D Line Plot**. Upload data Excel Anda untuk mulai memvisualisasikan data.
+Fitur Baru: **Stock Chart (Candlestick)** & **3D Surface**. Upload data Excel Anda untuk visualisasi.
 """)
 
 # --- 2. Fungsi Load Data ---
@@ -18,16 +19,19 @@ Fitur: **Dual Y-Axis** & **3D Line Plot**. Upload data Excel Anda untuk mulai me
 def load_data(file):
     try:
         df_raw = pd.read_excel(file)
-        # Pembersihan Data (Hapus baris satuan jika ada)
+        # Cek header/baris pertama
         first_val = df_raw.iloc[0, 0]
-        # Cek jika baris pertama adalah string/huruf (bukan angka)
         if isinstance(first_val, str) and not str(first_val).replace('.', '', 1).isdigit():
             df = df_raw.drop(index=0).reset_index(drop=True)
         else:
             df = df_raw
         
-        # Konversi ke angka
-        df = df.apply(pd.to_numeric, errors='coerce')
+        # Konversi ke angka (kecuali kolom yang terdeteksi tanggal/string)
+        # Kita biarkan kolom tanggal tetap object agar tidak error
+        for col in df.columns:
+            # Coba convert ke numeric, kalau gagal biarkan as-is
+            pd.to_numeric(df[col], errors='ignore')
+            
         return df
     except Exception:
         return None
@@ -47,12 +51,14 @@ if uploaded_file is not None:
         with col_settings:
             st.header("⚙️ Pengaturan")
             
-            # Pilihan Jenis Grafik (Menambahkan 3D Line Chart)
+            # Pilihan Jenis Grafik
             chart_type = st.selectbox(
                 "Pilih Jenis Grafik",
                 [
                     "📈 Line Chart (Dual Axis)", 
-                    "🧊 3D Line Chart",  # <--- ITEM BARU
+                    "🕯️ Stock Chart (Candlestick)", # <--- BARU
+                    "🧊 3D Line Chart", 
+                    "🏔️ 3D Surface Chart",         # <--- BARU
                     "📊 Bar Chart", 
                     "🔵 Scatter Plot", 
                     "🥧 Pie Chart", 
@@ -62,78 +68,143 @@ if uploaded_file is not None:
             
             st.divider()
             
-            # Inisialisasi Figure
+            # Inisialisasi Figure Default
             fig = plt.figure(figsize=(10, 6))
-            
-            # Kita buat ax default (2D), nanti jika 3D dipilih, kita timpa.
             ax = fig.add_subplot(111) 
             
-            # --- LOGIKA KHUSUS DUAL AXIS (LINE CHART) ---
-            if chart_type == "📈 Line Chart (Dual Axis)":
-                st.info("Mode ini memungkinkan Sumbu Kiri dan Kanan berbeda skala.")
+            # ==========================================
+            # 1. LOGIKA STOCK CHART (CANDLESTICK)
+            # ==========================================
+            if chart_type == "🕯️ Stock Chart (Candlestick)":
+                st.info("Pastikan urutan data benar (Open, High, Low, Close).")
                 
-                x_axis = st.selectbox("Pilih Sumbu X (Horizontal)", columns)
+                col_date = st.selectbox("Sumbu X (Waktu/Tanggal)", columns)
                 
-                # Input untuk Sumbu Kiri & Kanan
+                c1, c2 = st.columns(2)
+                with c1:
+                    open_col = st.selectbox("Open (Buka)", columns, index=0)
+                    high_col = st.selectbox("High (Tertinggi)", columns, index=1 if len(columns)>1 else 0)
+                with c2:
+                    low_col = st.selectbox("Low (Terendah)", columns, index=2 if len(columns)>2 else 0)
+                    close_col = st.selectbox("Close (Tutup)", columns, index=3 if len(columns)>3 else 0)
+
+                if col_date and open_col and high_col and low_col and close_col:
+                    # Pastikan data numerik
+                    for col in [open_col, high_col, low_col, close_col]:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    
+                    df = df.dropna(subset=[open_col, high_col, low_col, close_col])
+
+                    # Warna Candle
+                    up = df[df[close_col] >= df[open_col]]
+                    down = df[df[close_col] < df[open_col]]
+                    
+                    # Lebar batang
+                    width = 0.5
+                    width2 = 0.05
+
+                    # Gambar Candle Naik (Hijau)
+                    ax.bar(up[col_date], up[close_col]-up[open_col], width, bottom=up[open_col], color='green', edgecolor='black', linewidth=0.5)
+                    ax.bar(up[col_date], up[high_col]-up[close_col], width2, bottom=up[close_col], color='black') # Wick atas
+                    ax.bar(up[col_date], up[low_col]-up[open_col], width2, bottom=up[open_col], color='black')   # Wick bawah
+
+                    # Gambar Candle Turun (Merah)
+                    ax.bar(down[col_date], down[open_col]-down[close_col], width, bottom=down[close_col], color='red', edgecolor='black', linewidth=0.5)
+                    ax.bar(down[col_date], down[high_col]-down[open_col], width2, bottom=down[open_col], color='black') # Wick atas
+                    ax.bar(down[col_date], down[low_col]-down[close_col], width2, bottom=down[close_col], color='black') # Wick bawah
+
+                    ax.set_title(f"Stock Chart: {col_date}", pad=20)
+                    ax.set_ylabel("Harga")
+                    plt.xticks(rotation=45)
+
+            # ==========================================
+            # 2. LOGIKA 3D SURFACE CHART
+            # ==========================================
+            elif chart_type == "🏔️ 3D Surface Chart":
+                st.info("Grafik Surface menggunakan Triangulasi (cocok untuk data Excel biasa).")
+                
+                # Ubah ke mode 3D
+                fig.clear()
+                ax = fig.add_subplot(111, projection='3d')
+
+                c_x, c_y, c_z = st.columns(3)
+                with c_x: x_axis = st.selectbox("Sumbu X", columns, key="surf_x")
+                with c_y: y_axis = st.selectbox("Sumbu Y", columns, key="surf_y")
+                with c_z: z_axis = st.selectbox("Sumbu Z (Tinggi)", columns, key="surf_z")
+                
+                cmap_choice = st.selectbox("Warna (Colormap)", ["viridis", "plasma", "inferno", "magma", "coolwarm"])
+
+                if x_axis and y_axis and z_axis:
+                    # Pastikan Numeric
+                    df[x_axis] = pd.to_numeric(df[x_axis], errors='coerce')
+                    df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
+                    df[z_axis] = pd.to_numeric(df[z_axis], errors='coerce')
+                    df = df.dropna(subset=[x_axis, y_axis, z_axis])
+
+                    # Plot Trisurf (Triangulated Surface) - Lebih aman untuk data non-grid
+                    surf = ax.plot_trisurf(df[x_axis], df[y_axis], df[z_axis], cmap=cmap_choice, edgecolor='none', alpha=0.9, linewidth=0.2)
+                    
+                    fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5, label=z_axis)
+                    
+                    ax.set_xlabel(x_axis)
+                    ax.set_ylabel(y_axis)
+                    ax.set_zlabel(z_axis)
+                    ax.set_title(f"Surface Plot: {z_axis}")
+
+            # ==========================================
+            # 3. LOGIKA DUAL AXIS (Yg sudah ada)
+            # ==========================================
+            elif chart_type == "📈 Line Chart (Dual Axis)":
+                st.info("Sumbu Kiri dan Kanan bisa berbeda skala.")
+                x_axis = st.selectbox("Pilih Sumbu X", columns)
                 col_y1, col_y2 = st.columns(2)
                 with col_y1:
-                    y_left = st.multiselect("Sumbu Y Kiri (Utama)", [c for c in columns if c != x_axis])
+                    y_left = st.multiselect("Sumbu Y Kiri", [c for c in columns if c != x_axis])
                 with col_y2:
-                    y_right = st.multiselect("Sumbu Y Kanan (Sekunder)", [c for c in columns if c != x_axis and c not in y_left])
+                    y_right = st.multiselect("Sumbu Y Kanan", [c for c in columns if c != x_axis and c not in y_left])
 
-                # Logic Plotting Dual Axis
                 if x_axis and (y_left or y_right):
-                    # 1. Plot Sumbu Kiri (Ax1)
                     if y_left:
                         ax.set_xlabel(x_axis)
                         ax.set_ylabel("Sumbu Kiri", color="tab:blue")
                         for col in y_left:
-                            # Garis Solid untuk Kiri
                             ax.plot(df[x_axis], df[col], label=f"{col} (Kiri)", linestyle='-', marker='o')
                         ax.tick_params(axis='y', labelcolor="tab:blue")
 
-                    # 2. Plot Sumbu Kanan (Ax2)
                     if y_right:
-                        ax2 = ax.twinx()  # Membuat kembaran sumbu X tapi Y-nya beda
+                        ax2 = ax.twinx()
                         ax2.set_ylabel("Sumbu Kanan", color="tab:red")
                         for col in y_right:
-                            # Garis Putus-putus untuk Kanan (biar beda)
                             ax2.plot(df[x_axis], df[col], label=f"{col} (Kanan)", color='tab:red', linestyle='--', marker='x')
                         ax2.tick_params(axis='y', labelcolor="tab:red")
                     
-                    # Judul
-                    ax.set_title(f"Grafik Dual Axis: {x_axis}", pad=20)
+                    ax.set_title(f"Dual Axis: {x_axis}")
 
-            # --- LOGIKA KHUSUS 3D LINE CHART (BARU) ---
+            # ==========================================
+            # 4. LOGIKA 3D LINE (Yg sudah ada)
+            # ==========================================
             elif chart_type == "🧊 3D Line Chart":
-                st.info("Pilih 3 variabel untuk sumbu X, Y, dan Z.")
-                
-                # Kita perlu menghapus axis 2D default dan menggantinya dengan 3D projection
                 fig.clear()
                 ax = fig.add_subplot(111, projection='3d')
-
                 col_x, col_y, col_z = st.columns(3)
                 with col_x: x_axis = st.selectbox("Sumbu X", columns, key="3dx")
                 with col_y: y_axis = st.selectbox("Sumbu Y", columns, key="3dy")
-                with col_z: z_axis = st.selectbox("Sumbu Z (Tinggi)", columns, key="3dz")
+                with col_z: z_axis = st.selectbox("Sumbu Z", columns, key="3dz")
 
                 if x_axis and y_axis and z_axis:
-                    # Plotting 3D Line
-                    ax.plot(df[x_axis], df[y_axis], df[z_axis], marker='o', markersize=4, linestyle='-', linewidth=2)
-                    
-                    # Labeling
+                    ax.plot(df[x_axis], df[y_axis], df[z_axis], marker='o', markersize=4)
                     ax.set_xlabel(x_axis)
                     ax.set_ylabel(y_axis)
                     ax.set_zlabel(z_axis)
-                    ax.set_title(f"3D Plot: {x_axis} vs {y_axis} vs {z_axis}")
 
-            # --- LOGIKA GRAFIK LAINNYA (Standar) ---
+            # ==========================================
+            # 5. LOGIKA STANDARD LAINNYA
+            # ==========================================
             elif chart_type == "📊 Bar Chart":
                 x_axis = st.selectbox("Sumbu X", columns)
                 y_axis = st.multiselect("Sumbu Y", [c for c in columns if c != x_axis])
                 if x_axis and y_axis:
                     df.plot(kind='bar', x=x_axis, y=y_axis, ax=ax)
-                    ax.set_ylabel("Nilai")
 
             elif chart_type == "🔵 Scatter Plot":
                 x_axis = st.selectbox("Sumbu X", columns)
@@ -150,32 +221,33 @@ if uploaded_file is not None:
                     ax.pie(data_pie, labels=data_pie.index, autopct='%1.1f%%')
 
             elif chart_type == "🔥 Heatmap":
-                sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-                ax.set_title("Matriks Korelasi")
+                # Hanya ambil kolom numerik untuk korelasi
+                df_numeric = df.select_dtypes(include=[np.number])
+                if not df_numeric.empty:
+                    sns.heatmap(df_numeric.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
+                    ax.set_title("Matriks Korelasi")
+                else:
+                    st.warning("Data tidak memiliki kolom angka untuk Heatmap.")
 
-            # --- FINISHING & LEGENDA ---
+            # --- FINISHING & DOWNLOAD ---
             st.divider()
             tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
             dpi = st.number_input("Resolusi (DPI)", 100, 901, 300)
 
-            # Grid logic (Skip grid setting for Pie/Heatmap/3D handled automatically)
-            if tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🧊 3D Line Chart"]:
+            # Grid Logic
+            if tampilkan_grid and chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🧊 3D Line Chart", "🏔️ 3D Surface Chart"]:
                 ax.grid(True, linestyle='--', alpha=0.5)
             
-            # Legenda Logic
-            if chart_type == "📈 Line Chart (Dual Axis)" and (y_left or y_right):
-                # Trik menggabungkan legend dari 2 sumbu berbeda
-                lines1, labels1 = ax.get_legend_handles_labels()
-                if 'ax2' in locals(): # Kalau sumbu kanan aktif
+            # Legend Logic (Standard)
+            if chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🏔️ 3D Surface Chart", "🕯️ Stock Chart (Candlestick)"]:
+                if chart_type == "📈 Line Chart (Dual Axis)" and 'ax2' in locals():
+                    lines1, labels1 = ax.get_legend_handles_labels()
                     lines2, labels2 = ax2.get_legend_handles_labels()
                     ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left', bbox_to_anchor=(1.05, 1))
                 else:
-                    ax.legend(loc='upper left', bbox_to_anchor=(1.05, 1))
-            elif chart_type not in ["🥧 Pie Chart", "🔥 Heatmap", "🧊 3D Line Chart"]:
-                # Default legend placement for standard charts
-                ax.legend(bbox_to_anchor=(1, 1))
+                    ax.legend(bbox_to_anchor=(1.05, 1))
 
-        # --- 4. PREVIEW & DOWNLOAD ---
+        # --- 4. PREVIEW ---
         with col_preview:
             st.subheader("🖼️ Preview Grafik")
             st.pyplot(fig)
@@ -187,11 +259,11 @@ if uploaded_file is not None:
             st.download_button(
                 label=f"⬇️ Download Grafik ({dpi} DPI)",
                 data=buf,
-                file_name="grafik_studio.png",
+                file_name="grafik_pro.png",
                 mime="image/png",
                 use_container_width=True
             )
     else:
-        st.error("Format data Excel tidak valid.")
+        st.error("Format data Excel tidak valid atau kosong.")
 else:
-    st.info("👋 Upload file Excel untuk mencoba fitur Dual Axis dan 3D.")
+    st.info("👋 Silakan upload file Excel.")
