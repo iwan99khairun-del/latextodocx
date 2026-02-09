@@ -69,9 +69,10 @@ with nav_col2:
 
 with nav_col1:
     st.success(
-        "**📚 Membuat Grafik jurnal**\n\n"
+        "**📚 Menghitung Statistik**\n\n"
         "[Menghitung Statistik](https://iwan-latex.streamlit.app/Statistik)"
     )
+
 
 
 
