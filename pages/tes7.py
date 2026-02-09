@@ -262,7 +262,7 @@ if uploaded_file is not None:
 
         # --- 4. PREVIEW ---
         with col_preview:
-            st.subheader("🖼️ Hasil Grafik")
+            st.subheader("🖼️ Preview Grafik")
             st.pyplot(fig)
             
             buf = io.BytesIO()
