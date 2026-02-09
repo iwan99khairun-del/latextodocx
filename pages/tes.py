@@ -4,23 +4,23 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import io
 import re
-import numpy as np # Kita butuh ini untuk mengunci posisi
+import numpy as np
 
-# --- 1. SETTING HALAMAN ---
-st.set_page_config(page_title="Grafik Posisi Tetap", layout="wide")
-st.title("🌱 Grafik Box Plot (Posisi Titik Terkunci/Tetap)")
+# --- 1. CONFIG HALAMAN ---
+st.set_page_config(page_title="Pencari Posisi Titik Pas", layout="wide")
+st.title("🎯 Atur Letak Titik Sampai Pas")
 
-# --- 2. FUNGSI BACA DATA (ROBUST) ---
+# --- 2. BACA DATA ---
 @st.cache_data
 def load_data(file):
     try:
-        # Baca tanpa header
+        # Baca file
         if file.name.endswith('.csv'):
             df_temp = pd.read_csv(file, header=None)
         else:
             df_temp = pd.read_excel(file, header=None)
-            
-        # Cari baris judul (dose/gy)
+        
+        # Cari header
         header_idx = 0
         for i, row in df_temp.iterrows():
             txt = row.astype(str).str.lower().to_string()
@@ -28,7 +28,7 @@ def load_data(file):
                 header_idx = i
                 break
         
-        # Baca ulang
+        # Reload
         if file.name.endswith('.csv'):
             file.seek(0)
             df = pd.read_csv(file, header=header_idx)
@@ -47,7 +47,7 @@ def urutan_dosis(val):
     return int(cari.group()) if cari else 999
 
 # --- 3. PROGRAM UTAMA ---
-uploaded_file = st.file_uploader("Upload File Excel Bapak", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload File Excel", type=["xlsx", "csv"])
 
 if uploaded_file:
     df = load_data(uploaded_file)
@@ -55,7 +55,7 @@ if uploaded_file:
     if df is not None:
         cols = df.columns.tolist()
         
-        # Auto Pilih Kolom
+        # Auto Select
         try:
             col_x = next(c for c in cols if 'dose' in c.lower() or 'gy' in c.lower())
             col_y = next(c for c in cols if 'diversity' in c.lower() or 'genetic' in c.lower())
@@ -66,41 +66,45 @@ if uploaded_file:
         c1, c2 = st.columns([1, 2])
         
         with c1:
-            st.subheader("⚙️ Kunci Posisi")
+            st.subheader("🎛️ Pengendali Posisi")
             
             x_axis = st.selectbox("Sumbu X", cols, index=cols.index(col_x))
             y_axis = st.selectbox("Sumbu Y", cols, index=cols.index(col_y))
             
             st.divider()
             
-            # FITUR UTAMA: SEBARAN
-            st.write("📍 **Atur Kerapian Titik**")
-            jitter_val = st.slider("Lebar Sebaran", 0.0, 0.3, 0.15, 0.01)
+            st.write("### 🎮 CARI POSISI DI SINI:")
             
-            st.info("ℹ️ **INFO:** Kode ini menggunakan 'Pengunci' (Seed 42). Posisi titik TIDAK akan berubah-ubah lagi walau direfresh.")
+            # 1. ATUR LEBARNYA
+            jitter_val = st.slider("1. Lebar Sebaran (Jitter)", 0.0, 0.4, 0.15, step=0.01)
+            
+            # 2. ATUR POLANYA (SEED) - INI KUNCINYA
+            seed_val = st.number_input("2. Kode Pola (Ganti angka ini!)", 
+                                       min_value=1, max_value=1000, value=42, step=1,
+                                       help="Ganti angka ini (misal: 1, 2, 100) sampai ketemu posisi titik yang Bapak suka.")
+            
+            st.info("👆 **Tips:** Klik tombol (+) atau (-) pada 'Kode Pola' di atas. Perhatikan grafiknya akan berubah posisinya. Cari sampai ketemu yang pas.")
             
             st.divider()
             orientasi = st.radio("Bentuk", ["Vertikal", "Horizontal"])
 
         with c2:
-            st.subheader("🖼️ Hasil Final")
+            st.subheader("🖼️ Hasil Grafik")
             
             fig, ax = plt.subplots(figsize=(8, 6))
             
-            # Data Processing
+            # Data process
             df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
             urutan = sorted(df[x_axis].unique(), key=urutan_dosis)
             
-            # --- BAGIAN PENTING: PENGUNCI (LOCK) ---
-            # Kita set seed numpy supaya acakannya SELALU SAMA
-            np.random.seed(42) 
-            # ---------------------------------------
+            # --- PENGUNCI POSISI ---
+            # Kita kunci posisi berdasarkan angka yang Bapak masukkan
+            np.random.seed(seed_val) 
+            # -----------------------
 
             if orientasi == "Vertikal":
-                # Boxplot
                 sns.boxplot(data=df, x=x_axis, y=y_axis, order=urutan, ax=ax, 
                             palette="Pastel1", showfliers=False)
-                # Stripplot (Titik)
                 sns.stripplot(data=df, x=x_axis, y=y_axis, order=urutan, ax=ax, 
                               color='black', alpha=0.6, jitter=jitter_val, size=6)
                 
@@ -115,13 +119,4 @@ if uploaded_file:
                 ax.set_xlabel(y_axis, fontweight='bold')
                 ax.set_ylabel(x_axis, fontweight='bold')
 
-            ax.grid(True, linestyle='--', alpha=0.5)
-            st.pyplot(fig)
-            
-            # Download
-            buf = io.BytesIO()
-            fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
-            buf.seek(0)
-            st.download_button("⬇️ Download Gambar Stabil", buf, "grafik_stabil.png", "image/png")
-else:
-    st.info("Silakan upload file.")
+            ax.grid(True, linestyle='--',
