@@ -2,81 +2,60 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import io
 
-# --- 1. CONFIG ---
-st.set_page_config(page_title="Grafik Simpel", layout="wide")
-st.title("📦 Box Plot Manual (Anti-Eror)")
+st.title("🛠️ Perbaikan Khusus (Hardcode)")
 
-# --- 2. FUNGSI BACA DATA (Sangat Sederhana) ---
-def load_data_simple(file):
-    try:
-        # Baca file tanpa header dulu
-        if file.name.endswith('.csv'):
-            df = pd.read_csv(file, header=None)
-        else:
-            df = pd.read_excel(file, header=None)
-        return df
-    except Exception as e:
-        st.error(f"Gagal baca file: {e}")
-        return None
-
-# --- 3. PROGRAM UTAMA ---
-uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload File CSV Bapak", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
-    # 1. Tampilkan Data Mentah Dulu (Supaya Bapak bisa lihat isinya)
-    df_raw = load_data_simple(uploaded_file)
-    
-    if df_raw is not None:
-        st.subheader("1. Cek Data Mentah Anda")
-        st.write("Lihat tabel di bawah. Baris nomor berapa yang berisi Judul (Header)?")
-        st.dataframe(df_raw.head(5))
+    try:
+        # 1. BACA FILE (Khusus struktur file Bapak: Baris 1 kosong, Baris 2 Judul)
+        if uploaded_file.name.endswith('.csv'):
+            # header=1 artinya baris ke-2 dijadikan judul (karena baris 1 kosong)
+            df = pd.read_csv(uploaded_file, header=1)
+        else:
+            df = pd.read_excel(uploaded_file, header=1)
+
+        # 2. BERSIHKAN DATA (Hapus kolom 'Unnamed' yang muncul karena koma di depan)
+        # Kita ambil kolom yang namanya jelas saja
+        cols_to_use = [c for c in df.columns if "Unnamed" not in str(c)]
+        df = df[cols_to_use]
+
+        # 3. CEK DATA DI LAYAR (Supaya Bapak tahu apa yang dibaca komputer)
+        st.write("### 1. Data yang terbaca:")
+        st.dataframe(df.head())
+
+        # 4. AMBIL 2 KOLOM PERTAMA SECARA PAKSA
+        # (Tidak peduli namanya apa, pokoknya kolom 1 = Kategori, Kolom 2 = Angka)
+        col_kategori = df.columns[0]
+        col_nilai = df.columns[1]
+
+        st.write(f"Sumbu X: **{col_kategori}** | Sumbu Y: **{col_nilai}**")
+
+        # 5. CONVERT KE ANGKA (PENTING!)
+        df[col_nilai] = pd.to_numeric(df[col_nilai], errors='coerce')
+        df = df.dropna() # Hapus data yang gagal jadi angka
+
+        # 6. GAMBAR GRAFIK SEDERHANA
+        st.write("### 2. Hasil Grafik:")
+        fig, ax = plt.subplots(figsize=(8, 5))
         
-        # 2. Minta Bapak Tentukan Baris Judul
-        header_row = st.number_input("Masukkan Nomor Baris Judul (Lihat index di kiri tabel, mulai dari 0)", 
-                                     min_value=0, value=1, step=1)
+        # Urutan manual supaya rapi (0, 5, 10, 15, 20)
+        # Kita cek dulu apakah ada angka-angka ini di data
+        urutan_manual = ['0 gy', '5 gy', '10 gy', '15 gy', '20 gy']
+        # Hanya pakai urutan yang benar-benar ada di data Bapak
+        urutan_final = [u for u in urutan_manual if u in df[col_kategori].unique()]
         
-        if st.button("Proses Data"):
-            try:
-                # Reload data dengan header yang benar pilihan Bapak
-                if uploaded_file.name.endswith('.csv'):
-                    uploaded_file.seek(0)
-                    df = pd.read_csv(uploaded_file, header=header_row)
-                else:
-                    df = pd.read_excel(uploaded_file, header=header_row)
-                
-                # Buang kolom kosong/Unnamed
-                df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
-                
-                # --- MENU PILIH KOLOM ---
-                cols = df.columns.tolist()
-                c1, c2 = st.columns([1, 2])
-                
-                with c1:
-                    st.success("✅ Data Berhasil Dibaca!")
-                    x_axis = st.selectbox("Pilih Kolom Kategori (Dosis)", cols)
-                    y_axis = st.selectbox("Pilih Kolom Angka (Nilai)", cols)
-                    
-                    st.write("---")
-                    st.write("Pastikan kolom Nilai berisi ANGKA.")
-                    
-                with c2:
-                    # --- GAMBAR GRAFIK ---
-                    fig, ax = plt.subplots(figsize=(8, 6))
-                    
-                    # Paksa jadi angka (biar gak error)
-                    df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
-                    
-                    # Plot Sederhana
-                    sns.boxplot(data=df, x=x_axis, y=y_axis, ax=ax, palette="Set2")
-                    sns.stripplot(data=df, x=x_axis, y=y_axis, ax=ax, color='black', alpha=0.5)
-                    
-                    ax.set_title(f"{x_axis} vs {y_axis}")
-                    st.pyplot(fig)
-                    
-            except Exception as e:
-                st.error(f"TERJADI ERROR: {e}")
-                st.write("Coba ganti nomor baris judul di atas.")
-else:
-    st.info("Upload file dulu ya Pak.")
+        if not urutan_final: 
+            urutan_final = None # Kalau nama beda (misal "0 Gy"), biarkan otomatis
+
+        # Plot
+        sns.boxplot(data=df, x=col_kategori, y=col_nilai, order=urutan_final, ax=ax, palette="Set2")
+        sns.stripplot(data=df, x=col_kategori, y=col_nilai, order=urutan_final, ax=ax, color='black', alpha=0.5)
+        
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error("MASIH EROR PAK.")
+        st.error(f"Pesan Error Komputer: {e}")
+        st.write("Tolong fotokan pesan merah di atas ini kirim ke saya.")
