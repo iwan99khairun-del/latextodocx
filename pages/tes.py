@@ -75,13 +75,9 @@ if uploaded_file is not None:
                 # KUNCI POSISI AGAR DIAM
                 np.random.seed(seed_val)
                 
-                # GAMBAR BOXPLOT
-                sns.boxplot(data=df, x=col_x, y=col_y, order=urutan_fix, ax=ax, 
-                            palette="Pastel1", showfliers=False)
-                
-                # GAMBAR TITIK
-                sns.stripplot(data=df, x=col_x, y=col_y, order=urutan_fix, ax=ax, 
-                              color='black', alpha=0.6, jitter=jitter, size=6)
+                # GAMBAR SCATTER PLOT
+                sns.scatterplot(data=df, x=col_x, y=col_y, order=urutan_fix, ax=ax, 
+                                color='black', alpha=0.6, jitter=jitter, size=60)
                 
                 ax.grid(True, linestyle='--', alpha=0.5)
                 ax.set_ylabel(col_y, fontweight='bold')
