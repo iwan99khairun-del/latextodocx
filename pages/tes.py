@@ -62,7 +62,7 @@ if uploaded_file is not None:
             st.divider()
             
             # Variabel DPI didefinisikan LEBIH AWAL agar aman
-            dpi = st.number_input("Resolusi Gambar (DPI)", min_value=100, max_value=600, value=300)
+            dpi = st.number_input("Resolusi Gambar (DPI)", min_value=100, max_value=901, value=300)
             tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
             
             st.divider()
