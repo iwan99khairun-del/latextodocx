@@ -3,126 +3,109 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import io
+import re
 
-# --- 1. Konfigurasi Halaman ---
-st.set_page_config(page_title="Studio Grafik Tanaman", layout="wide")
-st.title("🌱 Analisis Data Tanaman (Auto Fix)")
-st.write("Aplikasi ini otomatis memperbaiki posisi judul yang bergeser.")
+# --- 1. SETTING HALAMAN ---
+st.set_page_config(page_title="Analisis Tanaman Final", layout="wide")
+st.title("🌱 Grafik Box Plot + Sebaran Data (Dots)")
 
-# --- 2. Fungsi Load Data (DIPERBAIKI) ---
+# --- 2. FUNGSI BACA DATA KHUSUS (SUPERSMART) ---
 @st.cache_data
 def load_data(file):
     try:
-        # 1. Baca dulu mentah-mentah tanpa header
+        # Baca file mentah
         if file.name.endswith('.csv'):
             df_temp = pd.read_csv(file, header=None)
         else:
             df_temp = pd.read_excel(file, header=None)
             
-        # 2. Cari baris mana yang isinya judul (bukan kosong)
-        header_row_index = 0
+        # Cari baris judul yang benar (cari kata "Dose" atau "gy")
+        header_idx = 0
         for i, row in df_temp.iterrows():
-            # Jika baris ini punya lebih dari 1 teks/isi, kemungkinan ini judulnya
-            if row.count() > 1:
-                header_row_index = i
+            row_str = row.astype(str).str.lower().to_string()
+            if 'dose' in row_str or 'gy' in row_str or 'dosis' in row_str:
+                header_idx = i
                 break
         
-        # 3. Baca ulang file mulai dari baris judul yang ditemukan
+        # Reload dengan header yang tepat
         if file.name.endswith('.csv'):
             file.seek(0)
-            df = pd.read_csv(file, header=header_row_index)
+            df = pd.read_csv(file, header=header_idx)
         else:
-            df = pd.read_excel(file, header=header_row_index)
+            df = pd.read_excel(file, header=header_idx)
 
-        # 4. Bersihkan kolom sampah (Unnamed)
-        # Hapus kolom yang namanya mengandung "Unnamed" ATAU yang isinya kosong semua
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed', case=False, na=False)]
-        df = df.dropna(axis=1, how='all') 
+        # Bersihkan data
+        df = df.dropna(axis=1, how='all') # Buang kolom kosong
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)] # Buang kolom Unnamed
         
         return df
     except Exception as e:
         return None
 
-# --- 3. Upload File ---
-uploaded_file = st.file_uploader("Upload File Data Tanaman (.csv / .xlsx)", type=["xlsx", "csv"])
+# Fungsi pengurut dosis (supaya 5 gy tidak lompat ke belakang)
+def urutan_dosis(val):
+    cari_angka = re.search(r'\d+', str(val))
+    return int(cari_angka.group()) if cari_angka else 999
 
-if uploaded_file is not None:
+# --- 3. MAIN PROGRAM ---
+uploaded_file = st.file_uploader("Upload Data Excel", type=["xlsx", "csv"])
+
+if uploaded_file:
     df = load_data(uploaded_file)
     
-    if df is not None and not df.empty:
-        columns = df.columns.tolist()
+    if df is not None:
+        cols = df.columns.tolist()
         
-        col_settings, col_preview = st.columns([1, 2])
-        
-        with col_settings:
-            st.header("⚙️ Pengaturan")
-            
-            # --- DETEKSI KOLOM OTOMATIS ---
-            # Cari kolom yang namanya mirip "Dose" atau "Gy"
-            col_kategori = next((c for c in columns if 'dose' in c.lower() or 'gy' in c.lower() or 'perlakuan' in c.lower()), columns[0])
-            
-            # Cari kolom yang namanya mirip "Genetic" atau "Diversity" atau angka lainnya
-            col_nilai_candidates = [c for c in columns if c != col_kategori]
-            col_nilai = next((c for c in col_nilai_candidates if 'diversity' in c.lower() or 'genetic' in c.lower()), col_nilai_candidates[0] if col_nilai_candidates else col_kategori)
+        # --- PRESET OTOMATIS UNTUK DATA BAPAK ---
+        # Mencari kolom dosis dan nilai secara otomatis
+        try:
+            col_kategori = next(c for c in cols if 'dose' in c.lower() or 'gy' in c.lower())
+            col_nilai = next(c for c in cols if 'diversity' in c.lower() or 'genetic' in c.lower() or 'tinggi' in c.lower())
+        except:
+            col_kategori = cols[0]
+            col_nilai = cols[1] if len(cols) > 1 else cols[0]
 
-            # Input User (Bisa diganti kalau deteksi salah)
-            cat_col = st.selectbox("Pilih Kolom Kategori (Sumbu X)", columns, index=columns.index(col_kategori))
-            val_col = st.selectbox("Pilih Kolom Nilai (Sumbu Y)", columns, index=columns.index(col_nilai) if col_nilai in columns else 0)
+        # --- LAYOUT ---
+        col_kiri, col_kanan = st.columns([1, 2])
+        
+        with col_kiri:
+            st.subheader("⚙️ Pengaturan")
+            x_axis = st.selectbox("Sumbu X (Grup)", cols, index=cols.index(col_kategori))
+            y_axis = st.selectbox("Sumbu Y (Nilai)", cols, index=cols.index(col_nilai))
             
             st.divider()
+            st.write(" **Tampilan Titik (Dots):**")
+            pake_dots = st.checkbox("Tampilkan Dots", value=True)
+            jitter_val = st.slider("Sebaran Titik (Jitter)", 0.0, 0.4, 0.1, 0.05)
             
-            # Pengaturan Tampilan
-            orientasi = st.radio("Arah Grafik", ["Vertikal (Berdiri)", "Horizontal (Tidur)"])
-            show_dots = st.checkbox("Tampilkan Titik Data (Dots)", value=True)
-            tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
-            dpi = st.number_input("Resolusi (DPI)", 100, 600, 300)
-
-            # --- RENDER GRAFIK ---
-            fig, ax = plt.subplots(figsize=(8, 6))
+            st.divider()
+            orientasi = st.radio("Orientasi", ["Vertikal", "Horizontal"])
             
-            try:
-                # Pastikan data nilai benar-benar angka
-                df[val_col] = pd.to_numeric(df[val_col], errors='coerce')
-                
-                # Plotting
-                if orientasi == "Vertikal (Berdiri)":
-                    sns.boxplot(data=df, x=cat_col, y=val_col, ax=ax, palette="Set2", showfliers=False)
-                    if show_dots:
-                        sns.stripplot(data=df, x=cat_col, y=val_col, ax=ax, color='black', alpha=0.5, jitter=True, size=5)
-                    ax.set_xlabel(cat_col, fontweight='bold')
-                    ax.set_ylabel(val_col, fontweight='bold')
-                else:
-                    sns.boxplot(data=df, x=val_col, y=cat_col, ax=ax, palette="Set2", showfliers=False)
-                    if show_dots:
-                        sns.stripplot(data=df, x=val_col, y=cat_col, ax=ax, color='black', alpha=0.5, jitter=True, size=5)
-                    ax.set_xlabel(val_col, fontweight='bold')
-                    ax.set_ylabel(cat_col, fontweight='bold')
+            # URUTKAN DATA (SORTING)
+            # Ambil data unik dan urutkan berdasarkan angkanya
+            kategori_unik = df[x_axis].unique()
+            urutan_fix = sorted(kategori_unik, key=urutan_dosis)
 
-                ax.set_title(f"Box Plot: {val_col} vs {cat_col}")
-                
-                if tampilkan_grid:
-                    ax.grid(True, linestyle='--', alpha=0.5)
-
-            except Exception as e:
-                st.error(f"Gagal membuat grafik: {e}")
-
-        # --- DOWNLOAD ---
-        with col_preview:
+        with col_kanan:
             st.subheader("🖼️ Hasil Grafik")
-            st.pyplot(fig)
             
-            buf = io.BytesIO()
-            fig.savefig(buf, format="png", bbox_inches='tight', dpi=dpi)
-            buf.seek(0)
+            # Setup Canvas
+            fig, ax = plt.subplots(figsize=(8, 5))
             
-            st.download_button(
-                label=f"⬇️ Download Grafik ({dpi} DPI)",
-                data=buf,
-                file_name="grafik_tanaman.png",
-                mime="image/png",
-                use_container_width=True
-            )
-    else:
-        st.error("File terbaca kosong. Coba cek isi file Excelnya.")
-else:
-    st.info("Silakan upload file CSV/Excel Bapak.")
+            # Pastikan data nilai jadi angka
+            df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
+            
+            # PLOTTING
+            if orientasi == "Vertikal":
+                # 1. Gambar Kotak (Boxplot)
+                sns.boxplot(data=df, x=x_axis, y=y_axis, order=urutan_fix, ax=ax, 
+                            palette="Pastel1", showfliers=False, width=0.5)
+                # 2. Gambar Titik (Stripplot)
+                if pake_dots:
+                    sns.stripplot(data=df, x=x_axis, y=y_axis, order=urutan_fix, ax=ax, 
+                                  color='black', alpha=0.6, jitter=jitter_val, size=5)
+                
+                ax.set_xlabel(x_axis, fontweight='bold')
+                ax.set_ylabel(y_axis, fontweight='bold')
+            
+            else: #
