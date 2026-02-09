@@ -11,3 +11,6 @@ Pillow
 scipy
 statsmodels
 deep-translator
+pdf2docx
+fpdf
+opencv-python-headless
