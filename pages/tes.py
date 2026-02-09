@@ -3,65 +3,92 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import re
 
-st.title("🛠️ Grafik Tanaman (Mode Perbaikan)")
+st.set_page_config(page_title="Grafik Final Anti-Eror")
+st.title("🛠️ Grafik: Mode Pembersih Paksa")
 
-uploaded_file = st.file_uploader("Upload File Excel", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
 
 if uploaded_file is not None:
     try:
-        # --- 1. BACA FILE (HARDCODE KHUSUS FILE BAPAK) ---
-        # Kita lewati baris pertama (header=1 artinya baris ke-2 jadi judul)
+        # 1. BACA FILE (Header di baris ke-2, karena baris 1 kosong)
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=1)
         else:
             df = pd.read_excel(uploaded_file, header=1)
 
-        # --- 2. BERSIHKAN KOLOM KOSONG ---
-        # Hapus kolom yang namanya "Unnamed" (kolom kosong di depan)
-        cols_bersih = [c for c in df.columns if "Unnamed" not in str(c)]
-        df = df[cols_bersih]
+        # 2. BERSIH-BERSIH EKSTREM (Sapu Jagat)
+        # Hapus kolom yang isinya kosong semua (Kolom A)
+        df = df.dropna(axis=1, how='all')
         
-        # Hapus baris yang kosong semua
+        # Hapus kolom yang namanya aneh (Unnamed) jika masih nyangkut
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed', na=False)]
+        
+        # Hapus baris yang kosong melompong
         df = df.dropna(how='all')
 
-        # --- 3. AMBIL 2 KOLOM PERTAMA (PAKSA) ---
-        # Kita tidak peduli namanya apa, pokoknya ambil kolom 1 dan 2
-        if len(df.columns) >= 2:
-            col_dosis = df.columns[0] # Kolom Dosis
-            col_nilai = df.columns[1] # Kolom Angka
+        # 3. AMBIL 2 KOLOM YANG TERSISA
+        # Kita anggap kolom pertama adalah Dosis, kolom kedua adalah Angka
+        # Apapun namanya!
+        cols = df.columns.tolist()
+        
+        if len(cols) < 2:
+            st.error("❌ Data tidak terbaca dengan benar. Pastikan Excel minimal ada 2 kolom isi.")
         else:
-            st.error("Gagal: Kolom data kurang dari 2.")
-            st.stop()
-
-        # --- 4. PASTIKAN ANGKA ---
-        df[col_nilai] = pd.to_numeric(df[col_nilai], errors='coerce')
-        
-        # --- 5. TAMPILKAN DATA (Untuk Pengecekan) ---
-        st.write("✅ **Data Terbaca:**")
-        st.write(f"Kolom Dosis: **{col_dosis}** | Kolom Nilai: **{col_nilai}**")
-        st.dataframe(df.head())
-
-        # --- 6. ATUR POSISI TITIK (BIAR GAK GOYANG) ---
-        col1, col2 = st.columns([1, 2])
-        
-        with col1:
-            st.subheader("Atur Titik")
-            # Slider Jitter
-            geser = st.slider("Geser Titik (Jitter)", 0.0, 0.3, 0.15)
-            # Kunci Posisi (Seed)
-            kunci = st.number_input("Kode Kunci Posisi (Seed)", value=42, step=1)
-            st.caption("Ubah angka '42' jika ingin posisi titik yang lain.")
-
-        with col2:
-            st.subheader("Grafik")
-            fig, ax = plt.subplots(figsize=(6, 5))
+            col_x = cols[0] # Kolom Dosis
+            col_y = cols[1] # Kolom Angka (Diversity/Tinggi)
             
-            # URUTKAN DOSIS (0, 5, 10...)
-            # Kita cari angka di dalam teks dosis untuk pengurutan
-            def cari_angka(teks):
-                import re
-                ketemu = re.search(r'\d+', str(teks))
-                return int(ketemu.group()) if ketemu else 999
+            # Konversi kolom ke-2 jadi angka (Paksa)
+            df[col_y] = pd.to_numeric(df[col_y], errors='coerce')
             
-            urutan = sorted(df[col_dosis].
+            # Buang data yang gagal jadi angka (misal judul nyangkut)
+            df = df.dropna(subset=[col_y])
+
+            # --- TAMPILAN ---
+            c1, c2 = st.columns([1, 2])
+            
+            with c1:
+                st.success(f"✅ Data Bersih! \n\nX: {col_x}\n\nY: {col_y}")
+                
+                st.write("---")
+                st.write("🎛️ **Atur Posisi Titik**")
+                
+                # SLIDER JITTER
+                jitter = st.slider("Sebaran (Jitter)", 0.0, 0.4, 0.15, step=0.01)
+                
+                # SEED (PENGUNCI)
+                seed_val = st.number_input("Kode Kunci (Ganti angka ini biar posisi berubah)", value=42)
+                
+                st.info("Selama 'Kode Kunci' sama, posisi titik tidak akan berubah.")
+
+            with c2:
+                fig, ax = plt.subplots(figsize=(7, 5))
+                
+                # URUTKAN DOSIS (Biar 0 gy di kiri, 5 gy di kanan)
+                def urutkan(teks):
+                    cari = re.search(r'\d+', str(teks))
+                    return int(cari.group()) if cari else 999
+                
+                urutan_fix = sorted(df[col_x].unique(), key=urutkan)
+                
+                # KUNCI POSISI AGAR DIAM
+                np.random.seed(seed_val)
+                
+                # GAMBAR BOXPLOT
+                sns.boxplot(data=df, x=col_x, y=col_y, order=urutan_fix, ax=ax, 
+                            palette="Pastel1", showfliers=False)
+                
+                # GAMBAR TITIK
+                sns.stripplot(data=df, x=col_x, y=col_y, order=urutan_fix, ax=ax, 
+                              color='black', alpha=0.6, jitter=jitter, size=6)
+                
+                ax.grid(True, linestyle='--', alpha=0.5)
+                ax.set_ylabel(col_y, fontweight='bold')
+                ax.set_xlabel(col_x, fontweight='bold')
+                
+                st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Masih Eror: {e}")
+        st.write("Kemungkinan format file Excel Bapak sangat berbeda dari contoh.")
