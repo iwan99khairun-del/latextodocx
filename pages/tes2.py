@@ -56,4 +56,62 @@ if uploaded_file is not None:
         
         # Slider Cropping
         y_min_crop, y_max_crop = st.slider("Potong Atas-Bawah (Y)", 0, height_ori, (0, height_ori))
-        x_min_crop, x_max_crop = st.slider("Potong Kiri-Kanan (X)", 0, width_
+        x_min_crop, x_max_crop = st.slider("Potong Kiri-Kanan (X)", 0, width_ori, (0, width_ori))
+        
+        # Proses Crop
+        cropped_img = img_array[y_min_crop:y_max_crop, x_min_crop:x_max_crop]
+        st.image(cropped_img, caption="Area Grafik yang Akan Diproses")
+        
+        h_crop, w_crop, _ = cropped_img.shape
+
+    # PROSES EKSTRAKSI
+    with col2:
+        st.subheader("📊 Hasil Data")
+        
+        # Logika Deteksi (Sama seperti sebelumnya)
+        hsv_img = cv2.cvtColor(cropped_img, cv2.COLOR_RGB2HSV)
+        target_hsv = hex_to_hsv(target_color_hex)
+
+        lower_bound = np.array([max(0, target_hsv[0]-tolerance), 50, 50])
+        upper_bound = np.array([min(179, target_hsv[0]+tolerance), 255, 255])
+        
+        mask = cv2.inRange(hsv_img, lower_bound, upper_bound)
+        
+        # Tampilkan Masking (Preview apa yang dilihat komputer)
+        st.image(mask, caption="Garis Terdeteksi (Putih = Data)", clamp=True)
+
+        # Hitung Koordinat
+        ys, xs = np.where(mask > 0)
+        
+        if len(xs) > 0:
+            df_pixel = pd.DataFrame({'px_x': xs, 'px_y': ys})
+            df_grouped = df_pixel.groupby('px_x')['px_y'].mean().reset_index()
+            
+            # Rumus Konversi Pixel ke Nilai Asli
+            df_grouped['Data_X'] = x_axis_min + (df_grouped['px_x'] / w_crop) * (x_axis_max - x_axis_min)
+            df_grouped['Data_Y'] = y_axis_min + ((h_crop - df_grouped['px_y']) / h_crop) * (y_axis_max - y_axis_min)
+            
+            final_df = df_grouped[['Data_X', 'Data_Y']].sort_values(by='Data_X')
+            
+            st.success(f"Ditemukan {len(final_df)} titik data.")
+            st.dataframe(final_df.head(), height=150)
+            
+            # Tombol Download
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                final_df.to_excel(writer, index=False, sheet_name='Sheet1')
+            
+            st.download_button(
+                label="📥 Download Excel",
+                data=output.getvalue(),
+                file_name="hasil_ekstraksi_grafik.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary" # Membuat tombol lebih menonjol
+            )
+            
+        else:
+            st.warning("⚠️ Garis tidak terdeteksi. Coba ganti warna atau naikkan toleransi di menu kiri.")
+
+else:
+    # Pesan jika belum ada file yang diupload
+    st.info("👆 Silakan upload file grafik di atas untuk memulai.")
