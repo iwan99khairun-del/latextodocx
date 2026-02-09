@@ -121,7 +121,7 @@ if uploaded_file is not None:
             # --- FINISHING & LEGENDA ---
             st.divider()
             tampilkan_grid = st.checkbox("Tampilkan Grid", value=True)
-            dpi = st.number_input("Resolusi (DPI)", 100, 600, 300)
+            dpi = st.number_input("Resolusi (DPI)", 100, 901, 300)
 
             # Grid & Legend Pintar
             if tampilkan_grid and "Pie" not in chart_type and "Heatmap" not in chart_type:
