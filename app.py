@@ -57,10 +57,15 @@ with nav_col2:
 
 with nav_col1:
     st.warning(
-        "**📚 Membuat Grafik 2026**\n\n"
+        "**📚 Membuat Grafik jurnal**\n\n"
         "[Membuat Grafik lebih mudah](https://iwan-latex.streamlit.app/Membuat_grafik_Jurnal)"
     )
 
+with nav_col2:
+    st.warning(
+        "**📚 List jurnal scopus**\n\n"
+        "[List Conference](https://iwan-latex.streamlit.app/List_Jurnal Scopus)"
+    )
 
 
 
