@@ -5,10 +5,12 @@ import io
 import google.generativeai as genai
 
 # --- KONFIGURASI API KEY ---
-# Masukkan API Key Google Gemini Anda di sini
-# Dapatkan gratis di: https://aistudio.google.com/app/apikey
-API_KEY = ".PO6M Gemini API Key" 
-genai.configure(api_key=API_KEY)
+# Mengambil kunci dari Secrets Streamlit agar aman
+try:
+    API_KEY = st.secrets["PO6M"]
+    genai.configure(api_key=API_KEY)
+except Exception:
+    st.error("API Key belum disetting di Streamlit Secrets!")
 
 # --- FUNGSI BANTUAN ---
 
