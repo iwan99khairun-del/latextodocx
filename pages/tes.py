@@ -1,122 +1,142 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 import io
-from datetime import datetime
 import re
+from datetime import datetime
 
-st.set_page_config(page_title="Boxplot Editor - Bisa Upload Kembali", layout="wide")
-st.title("📊 Boxplot Editor (Edit → Download → Upload lagi → Grafik sama)")
+st.set_page_config(page_title="Boxplot Editor - Edit & Upload Kembali", layout="wide")
+st.title("📊 Boxplot Editor – Edit Kotak → Download → Upload Lagi → Grafik Sama Persis")
 
-# ── Fungsi pengurutan natural ──
+# Fungsi pengurutan natural (biar group seperti A1, A2, A10 urut benar)
 def natural_sort_key(s):
-    s = str(s)
-    num = re.search(r'(\d+)', s)
-    return int(num.group(1)) if num else s
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
 
-# ── Upload ──
-uploaded = st.file_uploader("Upload CSV data raw atau CSV statistik custom", type=["csv"])
+# Upload file CSV
+uploaded_file = st.file_uploader("Upload CSV data mentah atau CSV konfigurasi kotak custom", type=["csv"])
 
-if uploaded is not None:
+if uploaded_file is not None:
     try:
-        df = pd.read_csv(uploaded)
+        df_upload = pd.read_csv(uploaded_file)
+        df_upload.columns = df_upload.columns.str.strip()
 
-        # Deteksi apakah ini file statistik custom (bukan data raw)
-        custom_columns = {'Group', 'Median', 'Q1', 'Q3', 'Lebar_kotak'}
-        if custom_columns.issubset(df.columns):
-            # ── Mode: upload hasil edit sebelumnya ──
-            st.success("File custom terdeteksi → grafik menggunakan nilai edit kamu")
+        # Deteksi apakah ini file konfigurasi custom (harus punya kolom ini)
+        custom_cols = ['Group', 'Median', 'Q1', 'Q3', 'Lebar_kotak']
+        is_custom = all(col in df_upload.columns for col in custom_cols)
 
-            data_config = {}
-            for _, row in df.iterrows():
+        if is_custom:
+            # Mode: upload konfigurasi custom → langsung pakai nilai edit
+            st.success("✅ File konfigurasi custom terdeteksi! Grafik akan pakai nilai yang sudah diedit sebelumnya.")
+
+            config = {}
+            groups = []
+            for _, row in df_upload.iterrows():
                 g = str(row['Group'])
-                data_config[g] = {
+                groups.append(g)
+                config[g] = {
                     'med': float(row['Median']),
                     'q1': float(row['Q1']),
                     'q3': float(row['Q3']),
-                    'whislo': float(row.get('Min_whisker', row['Q1'])),
-                    'whishi': float(row.get('Max_whisker', row['Q3'])),
+                    'whislo': float(row.get('Min_whisker', row['Q1'] - 1.5*(row['Q3'] - row['Q1']))),
+                    'whishi': float(row.get('Max_whisker', row['Q3'] + 1.5*(row['Q3'] - row['Q1']))),
                     'width': float(row['Lebar_kotak'])
                 }
 
-            groups = sorted(data_config.keys(), key=natural_sort_key)
+            groups = sorted(groups, key=natural_sort_key)
+            has_raw_data = False  # Tidak ada titik scatter di mode custom
 
         else:
-            # ── Mode: data raw ──
-            st.info("File data raw terdeteksi → pilih kolom dulu")
+            # Mode: data mentah → pilih kolom & hitung stats awal
+            st.info("📄 File data mentah terdeteksi. Pilih kolom untuk grafik.")
 
             col1, col2 = st.columns(2)
-            x_col = col1.selectbox("Kolom kategori (X)", df.columns)
-            y_col = col2.selectbox("Kolom nilai (Y)", df.columns, index=1)
+            with col1:
+                x_col = st.selectbox("Kolom kategori (Group / X)", df_upload.columns)
+            with col2:
+                y_col = st.selectbox("Kolom nilai numerik (Y)", df_upload.columns, index=1 if len(df_upload.columns) > 1 else 0)
 
             if x_col and y_col:
-                df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
-                df = df.dropna(subset=[x_col, y_col])
+                # Bersihkan data
+                df_upload[y_col] = pd.to_numeric(df_upload[y_col], errors='coerce')
+                df_upload = df_upload.dropna(subset=[x_col, y_col]).copy()
 
-                groups_raw = sorted(df[x_col].unique(), key=natural_sort_key)
+                # Simpan data mentah untuk scatter
+                df_raw = df_upload[[x_col, y_col]].copy()
+
+                groups_raw = sorted(df_upload[x_col].unique(), key=natural_sort_key)
                 groups = [str(g) for g in groups_raw]
 
-                data_config = {}
-                for g_str in groups:
-                    sub = df[df[x_col] == g_str][y_col]
-                    desc = sub.describe()
-                    data_config[g_str] = {
-                        'med': float(desc['50%']),
-                        'q1': float(desc['25%']),
-                        'q3': float(desc['75%']),
-                        'whislo': float(desc['min']),
-                        'whishi': float(desc['max']),
-                        'width': 0.65
-                    }
+                # Inisialisasi config (pakai session_state biar tetap saat rerun)
+                if 'config' not in st.session_state:
+                    st.session_state.config = {}
 
-        # ── Jika sudah punya data_config ──
-        if 'data_config' in locals() and data_config:
+                for g in groups:
+                    if g not in st.session_state.config:
+                        sub = df_upload[df_upload[x_col] == g][y_col]
+                        desc = sub.describe()
+                        st.session_state.config[g] = {
+                            'med': float(desc['50%']),
+                            'q1': float(desc['25%']),
+                            'q3': float(desc['75%']),
+                            'whislo': float(desc['min']),
+                            'whishi': float(desc['max']),
+                            'width': 0.65
+                        }
+
+                config = st.session_state.config
+                has_raw_data = True
+
+        # Jika sudah punya groups & config → tampilkan grafik & edit
+        if 'groups' in locals() and groups and 'config' in locals():
             st.divider()
 
-            left, right = st.columns([1, 2.5])
+            left_col, right_col = st.columns([1, 2.5])
 
-            with left:
-                # Pengaturan global
-                with st.expander("Pengaturan grafik", expanded=False):
-                    fig_w = st.slider("Lebar gambar", 5.0, 15.0, 9.0, 0.5)
-                    fig_h = st.slider("Tinggi gambar", 4.0, 10.0, 6.0, 0.5)
-                    pt_size = st.slider("Ukuran titik", 10, 80, 30, 5)
-                    jitter = st.slider("Jitter titik", 0.0, 0.4, 0.08, 0.02)
+            with left_col:
+                with st.expander("Pengaturan Grafik Global", expanded=False):
+                    fig_width = st.slider("Lebar gambar", 6.0, 16.0, 10.0, 0.5)
+                    fig_height = st.slider("Tinggi gambar", 4.0, 12.0, 6.5, 0.5)
+                    if has_raw_data:
+                        point_size = st.slider("Ukuran titik scatter", 10, 100, 40, 5)
+                        jitter_val = st.slider("Jitter titik", 0.0, 0.4, 0.1, 0.02)
+                        seed = st.number_input("Seed random jitter", value=42, step=1)
 
-                # Edit per group (hanya jika mode data raw)
-                if 'x_col' in locals():
-                    st.subheader("Edit kotak")
-                    sel = st.selectbox("Pilih group", groups)
+                # Edit hanya aktif di mode data mentah
+                if not is_custom:
+                    st.subheader("✏️ Edit Kotak per Group")
+                    selected_group = st.selectbox("Pilih group untuk diedit", groups)
 
-                    if sel:
-                        conf = data_config[sel]
+                    if selected_group:
+                        current = config[selected_group]
 
-                        new_w = st.slider(f"Lebar kotak {sel}", 0.3, 1.0, conf['width'], 0.05)
-
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            q3 = st.number_input(f"Q3 {sel}", value=conf['q3'], format="%.4f")
-                            q1 = st.number_input(f"Q1 {sel}", value=conf['q1'], format="%.4f")
-                        with c2:
-                            med = st.number_input(f"Median {sel}", value=conf['med'], format="%.4f")
+                        new_width = st.slider("Lebar kotak", 0.2, 1.0, current['width'], 0.05)
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            new_q1 = st.number_input("Q1 (bawah)", value=current['q1'], format="%.4f")
+                            new_q3 = st.number_input("Q3 (atas)", value=current['q3'], format="%.4f")
+                        with col_b:
+                            new_med = st.number_input("Median", value=current['med'], format="%.4f")
 
                         # Simpan perubahan
-                        data_config[sel]['width'] = new_w
-                        data_config[sel]['q1'] = q1
-                        data_config[sel]['q3'] = q3
-                        data_config[sel]['med'] = med
+                        config[selected_group].update({
+                            'width': new_width,
+                            'q1': new_q1,
+                            'q3': new_q3,
+                            'med': new_med
+                        })
 
-            with right:
-                st.subheader("Grafik")
+            with right_col:
+                st.subheader("🖼️ Preview Grafik")
 
-                fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+                fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+                ax.set_facecolor('#fafafa')
 
-                stats = []
-                ws = []
+                # Boxplot dari config (selalu pakai nilai edit)
+                bxp_stats = []
+                widths = []
                 for g in groups:
-                    c = data_config[g]
-                    stats.append({
+                    c = config[g]
+                    bxp_stats.append({
                         'label': g,
                         'med': c['med'],
                         'q1': c['q1'],
@@ -125,38 +145,54 @@ if uploaded is not None:
                         'whishi': c['whishi'],
                         'fliers': []
                     })
-                    ws.append(c['width'])
+                    widths.append(c['width'])
 
-                ax.bxp(stats, widths=ws, showfliers=False, patch_artist=True,
-                       boxprops=dict(facecolor='#bbdefb', edgecolor='#0d47a1'),
-                       medianprops=dict(color='#c62828', linewidth=2.5))
+                ax.bxp(bxp_stats, widths=widths, showfliers=False, patch_artist=True,
+                       boxprops=dict(facecolor='#bbdefb', edgecolor='#1976d2', linewidth=1.2),
+                       medianprops=dict(color='#d32f2f', linewidth=2.5),
+                       whiskerprops=dict(color='#1976d2', linewidth=1.2),
+                       capprops=dict(color='#1976d2', linewidth=1.2))
 
+                # Titik scatter (hanya jika ada data mentah)
+                if has_raw_data:
+                    import numpy as np
+                    np.random.seed(seed)
+                    pos_map = {g: i+1 for i, g in enumerate(groups)}
+                    df_raw['pos'] = df_raw[x_col].astype(str).map(pos_map)
+                    noise = np.random.uniform(-jitter_val, jitter_val, len(df_raw))
+                    ax.scatter(df_raw['pos'] + noise, df_raw[y_col],
+                               s=point_size, color='orange', edgecolor='darkred', alpha=0.8, zorder=3)
+
+                ax.set_xticks(range(1, len(groups)+1))
                 ax.set_xticklabels(groups, rotation=45, ha='right')
-                ax.grid(True, axis='y', alpha=0.3)
+                ax.set_xlabel("Group")
+                ax.set_ylabel("Nilai")
+                ax.grid(True, axis='y', alpha=0.3, linestyle='--')
+
                 st.pyplot(fig)
 
-                # ── Download ──
+                # Download
                 st.divider()
-                st.subheader("Download")
+                st.subheader("⬇️ Download")
 
-                col_dpi, col_btn = st.columns([1, 2])
+                d1, d2 = st.columns(2)
 
-                with col_dpi:
-                    dpi = st.selectbox("Resolusi PNG", [200, 300, 400, 600])
-
-                with col_btn:
-                    buf_png = io.BytesIO()
-                    fig.savefig(buf_png, dpi=dpi, bbox_inches='tight', format='png')
-                    buf_png.seek(0)
-                    st.download_button("⬇️ Download Grafik PNG", buf_png,
-                                       f"boxplot_{datetime.now():%Y%m%d_%H%M}.png",
+                with d1:
+                    dpi = st.selectbox("Resolusi PNG", [200, 300, 600], index=1)
+                    buf_img = io.BytesIO()
+                    fig.savefig(buf_img, format='png', dpi=dpi, bbox_inches='tight')
+                    buf_img.seek(0)
+                    st.download_button("📷 Download Grafik PNG",
+                                       buf_img,
+                                       f"boxplot_{datetime.now().strftime('%Y%m%d_%H%M')}.png",
                                        "image/png")
 
-                    # ── Download statistik custom (untuk upload ulang) ──
-                    rows = []
+                with d2:
+                    # Download konfigurasi kotak (untuk upload ulang)
+                    export_data = []
                     for g in groups:
-                        c = data_config[g]
-                        rows.append({
+                        c = config[g]
+                        export_data.append({
                             'Group': g,
                             'Median': round(c['med'], 4),
                             'Q1': round(c['q1'], 4),
@@ -166,21 +202,20 @@ if uploaded is not None:
                             'Lebar_kotak': round(c['width'], 3)
                         })
 
-                    df_out = pd.DataFrame(rows)
-
+                    df_export = pd.DataFrame(export_data)
                     buf_csv = io.BytesIO()
-                    df_out.to_csv(buf_csv, index=False, encoding='utf-8-sig')
+                    df_export.to_csv(buf_csv, index=False, encoding='utf-8-sig')
                     buf_csv.seek(0)
 
-                    st.download_button(
-                        "⬇️ Download Statistik Custom (bisa upload lagi)",
-                        buf_csv,
-                        f"boxplot_custom_{datetime.now():%Y%m%d_%H%M}.csv",
-                        "text/csv",
-                        help="Upload file ini lagi nanti → grafik akan sama persis seperti sekarang"
-                    )
+                    st.download_button("📄 Download Konfigurasi Kotak (CSV)",
+                                       buf_csv,
+                                       f"boxplot_custom_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                                       "text/csv",
+                                       help="Upload file CSV ini lagi → grafik akan sama persis seperti sekarang!")
 
     except Exception as e:
-        st.error(f"Ada masalah: {e}\nCoba upload ulang file atau reset halaman.")
+        st.error(f"Error: {e}")
+        st.info("Coba cek format file CSV (header harus benar, nilai numerik tidak boleh ada teks).")
 
-st.caption("Catatan: Saat upload file custom, edit fitur dinonaktifkan sementara (hanya tampil grafik).")
+else:
+    st.info("Upload file CSV dulu ya untuk mulai.")
