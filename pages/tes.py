@@ -38,11 +38,9 @@ if uploaded_file:
             y_col = st.selectbox("Sumbu Y (Angka):", df.columns, index=1 if len(df.columns) > 1 else 0, key="y_col_select")
 
         if x_col and y_col:
-            # Bersihkan data
             df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
             df = df.dropna(subset=[x_col, y_col])
             
-            # Reset jika ganti kolom
             curr_state = f"{x_col}_{y_col}_{uploaded_file.name}"
             if 'last_key' not in st.session_state or st.session_state['last_key'] != curr_state:
                 st.session_state['data_config'] = {}
@@ -54,19 +52,14 @@ if uploaded_file:
             if 'data_config' not in st.session_state:
                 st.session_state['data_config'] = {}
             
-            # Inisialisasi statistik (hanya sekali di awal)
             for cat in cats:
                 cat_str = str(cat)
                 if cat_str not in st.session_state['data_config']:
                     sub = df[df[x_col] == cat][y_col]
                     stats = sub.describe()
                     st.session_state['data_config'][cat_str] = {
-                        'med': float(stats['50%']),
-                        'q1': float(stats['25%']),
-                        'q3': float(stats['75%']),
-                        'whislo': float(stats['min']),
-                        'whishi': float(stats['max']),
-                        'width': 0.65
+                        'med': float(stats['50%']), 'q1': float(stats['25%']), 'q3': float(stats['75%']),
+                        'whislo': float(stats['min']), 'whishi': float(stats['max']), 'width': 0.65
                     }
 
             st.write("---")
@@ -85,7 +78,6 @@ if uploaded_file:
                 if pilih_group:
                     conf = st.session_state['data_config'][pilih_group]
                     new_w = st.slider(f"Lebar Kotak", 0.1, 1.0, float(conf['width']))
-                    
                     c_h1, c_h2 = st.columns(2)
                     with c_h1:
                         new_q3 = st.number_input("Atas (Q3)", value=float(conf['q3']), format="%.4f")
@@ -93,7 +85,6 @@ if uploaded_file:
                     with c_h2:
                         new_med = st.number_input("Tengah (Median)", value=float(conf['med']), format="%.4f")
                     
-                    # Update session state dengan nilai baru
                     st.session_state['data_config'][pilih_group].update({
                         'width': new_w, 'q3': new_q3, 'q1': new_q1, 'med': new_med
                     })
@@ -103,7 +94,6 @@ if uploaded_file:
                 fig, ax = plt.subplots(figsize=(fig_w, fig_h))
                 ax.set_facecolor('white')
                 
-                # Plot Boxplot (Menggunakan data yang sudah di-edit di session state)
                 bxp_stats = []
                 list_widths = []
                 for cat in cats:
@@ -119,19 +109,14 @@ if uploaded_file:
                        boxprops=dict(facecolor='#E6E6E6', edgecolor='#595959', linewidth=1, zorder=2),
                        medianprops=dict(color='red', linewidth=2, zorder=3))
 
-                # --- PLOT TITIK (SCATTER) DARI DATA ASLI ---
                 cat_map = {str(c): i+1 for i, c in enumerate(cats)}
-                np.random.seed(42) # Agar posisi jitter tetap stabil saat slider digeser
+                np.random.seed(42)
 
                 for i, cat in enumerate(cats):
                     c_str = str(cat)
-                    # AMBIL DATA ASLI DARI DATAFRAME (df)
                     y_real = df[df[x_col].astype(str) == c_str][y_col]
-                    
-                    # Buat sebaran horizontal (jitter)
                     x_noise = np.random.uniform(-jitter_val, jitter_val, size=len(y_real))
                     x_pos = np.full(len(y_real), i + 1) + x_noise
-                    
                     ax.scatter(x_pos, y_real, s=dot_size**1.5, c=dot_color, alpha=0.6, 
                                zorder=5, edgecolor='black', linewidth=0.3)
 
@@ -139,10 +124,45 @@ if uploaded_file:
                 ax.set_ylabel(y_col, fontweight='bold')
                 st.pyplot(fig)
 
-                # DOWNLOAD
-                buf = io.BytesIO()
-                fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-                st.download_button("⬇️ Download PNG", buf.getvalue(), "plot_asli.png", "image/png")
+                # --- 📥 MENU DOWNLOAD (SUDAH KEMBALI) ---
+                st.write("---")
+                st.subheader("📥 Download Hasil")
+                d_col1, d_col2 = st.columns(2)
+                
+                with d_col1:
+                    # Download Gambar High-Res
+                    buf = io.BytesIO()
+                    fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+                    st.download_button(
+                        label="⬇️ Download Gambar (PNG)",
+                        data=buf.getvalue(),
+                        file_name="grafik_jurnal.png",
+                        mime="image/png",
+                        use_container_width=True
+                    )
+                
+                with d_col2:
+                    # Download Statistik Hasil Edit
+                    export_rows = []
+                    for cat_name in cats:
+                        c_str = str(cat_name)
+                        row = {
+                            'Is_Edited_Summary': True,
+                            'Original_X_Label': x_col,
+                            'Original_Y_Label': y_col,
+                            'Group_Name': c_str,
+                            **st.session_state['data_config'][c_str]
+                        }
+                        export_rows.append(row)
+                    
+                    csv_data = pd.DataFrame(export_rows).to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="⬇️ Download Data Statistik (CSV)",
+                        data=csv_data,
+                        file_name="data_statistik_edit.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
 
     except Exception as e:
         st.error(f"Gagal memproses data: {e}")
