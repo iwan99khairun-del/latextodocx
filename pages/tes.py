@@ -6,247 +6,279 @@ import io
 import re
 from datetime import datetime
 
-# ========================= SETUP =========================
-st.set_page_config(page_title="Boxplot Custom Editor", layout="wide")
-st.title("📊 Box-and-Whisker Plot - Edit per Group")
+# ── SETUP HALAMAN ──
+st.set_page_config(page_title="Boxplot Editor - Asli vs Edit", layout="wide")
+st.title("📊 Box-and-Whisker Plot Editor (Asli vs Custom)")
 st.markdown("""
 <style>
-    .stNumberInput input { background-color: #f0f2f6; }
-    .block-container { padding-top: 2rem; }
+    .stNumberInput input { background-color: #f8f9fa; }
+    .block-container { padding-top: 1.5rem; }
     .stButton button { width: 100%; }
 </style>
 """, unsafe_allow_html=True)
 
-# ========================= FUNGSI =========================
+# ── FUNGSI HELPER ──
 def natural_sort_key(s):
     s = str(s)
-    angka = re.search(r'(\d+)', s)
-    return int(angka.group(1)) if angka else s
+    match = re.search(r'(\d+)', s)
+    return int(match.group(1)) if match else s
 
-# ========================= UPLOAD FILE =========================
-uploaded_file = st.file_uploader("Upload File Excel / CSV", type=["xlsx", "csv"])
+# ── UPLOAD FILE ──
+uploaded_file = st.file_uploader("Upload file .csv atau .xlsx", type=["csv", "xlsx"])
 
-if uploaded_file:
+if uploaded_file is not None:
     try:
-        # Baca file
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, header=0)
+        # Baca data
+        if uploaded_file.name.lower().endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
         else:
-            df = pd.read_excel(uploaded_file, header=0)
+            df = pd.read_excel(uploaded_file)
 
         df.columns = df.columns.astype(str).str.strip()
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+        df = df.loc[:, ~df.columns.str.contains(r'^Unnamed')]
 
         # Pilih kolom
-        c1, c2 = st.columns(2)
-        with c1:
-            x_col = st.selectbox("Sumbu X (Kategori/Group):", df.columns, key="x_col")
-        with c2:
-            y_col = st.selectbox("Sumbu Y (Nilai Numerik):", df.columns, 
-                               index=1 if len(df.columns) > 1 else 0, key="y_col")
+        col1, col2 = st.columns(2)
+        with col1:
+            x_col = st.selectbox("Kolom kategori (sumbu X)", df.columns.tolist(), key="xcol")
+        with col2:
+            y_col = st.selectbox("Kolom nilai numerik (sumbu Y)", df.columns.tolist(), 
+                               index=min(1, len(df.columns)-1), key="ycol")
 
         if x_col and y_col:
-            # Key untuk reset session saat file/kolom berubah
-            current_key = f"{uploaded_file.name}_{x_col}_{y_col}"
-            
-            if 'last_key' not in st.session_state or st.session_state.last_key != current_key:
+            current_state_key = f"{uploaded_file.name}__{x_col}__{y_col}"
+
+            # Reset session jika file atau kolom berubah
+            if 'prev_state_key' not in st.session_state or st.session_state.prev_state_key != current_state_key:
                 st.session_state.data_config = {}
                 st.session_state.original_stats = {}
-                st.session_state.last_key = current_key
+                st.session_state.prev_state_key = current_state_key
 
-            # Bersihkan data
             df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
             df = df.dropna(subset=[x_col, y_col])
 
-            raw_cats = df[x_col].unique()
-            cats = sorted(raw_cats, key=natural_sort_key)
+            # Urutkan kategori secara natural
+            categories = sorted(df[x_col].unique(), key=natural_sort_key)
+            cat_strings = [str(c) for c in categories]
 
-            # Inisialisasi config
-            for cat in cats:
+            # Inisialisasi statistik asli & config edit
+            for cat in categories:
                 cat_str = str(cat)
-                if cat_str not in st.session_state.data_config:
-                    sub_data = df[df[x_col] == cat][y_col]
-                    stats = sub_data.describe()
-                    
-                    config = {
-                        'med': float(stats['50%']),
-                        'q1': float(stats['25%']),
-                        'q3': float(stats['75%']),
-                        'whislo': float(stats['min']),
-                        'whishi': float(stats['max']),
-                        'width': 0.65,
-                        'n': int(len(sub_data))
+                if cat_str not in st.session_state.original_stats:
+                    subset = df[df[x_col] == cat][y_col]
+                    if len(subset) == 0:
+                        continue
+                    desc = subset.describe()
+
+                    stats = {
+                        'n': len(subset),
+                        'med': float(desc['50%']),
+                        'q1': float(desc['25%']),
+                        'q3': float(desc['75%']),
+                        'whislo': float(desc['min']),
+                        'whishi': float(desc['max']),
+                        'width': 0.65
                     }
-                    
-                    st.session_state.data_config[cat_str] = config.copy()
-                    st.session_state.original_stats[cat_str] = config.copy()
 
-            # ====================== LAYOUT ======================
-            st.write("---")
-            col_kiri, col_kanan = st.columns([1, 2])
+                    st.session_state.original_stats[cat_str] = stats.copy()
+                    st.session_state.data_config[cat_str] = stats.copy()
 
-            # ==================== KIRI: Pengaturan ====================
-            with col_kiri:
-                with st.expander("1️⃣ Pengaturan Global", expanded=False):
-                    fig_w = st.slider("Lebar Gambar", 4.0, 16.0, 8.0, 0.5)
-                    fig_h = st.slider("Tinggi Gambar", 3.0, 10.0, 5.5, 0.5)
-                    point_size = st.slider("Ukuran Titik", 3.0, 20.0, 8.0, 0.5)
-                    jitter = st.slider("Jitter", 0.0, 0.5, 0.15, 0.01)
-                    seed = st.number_input("Seed Random", value=42, step=1)
+            # ── LAYOUT ──
+            st.divider()
+            left_col, right_col = st.columns([1, 2.2])
 
-                    if st.button("🔄 Reset SEMUA ke Data Asli"):
+            # ── KIRI : Pengaturan ──
+            with left_col:
+                with st.expander("Pengaturan grafik (global)", expanded=False):
+                    fig_width = st.slider("Lebar figure", 4.0, 16.0, 9.0, 0.5)
+                    fig_height = st.slider("Tinggi figure", 3.0, 12.0, 6.0, 0.5)
+                    point_size = st.slider("Ukuran titik", 4, 80, 25, 2)
+                    jitter_amount = st.slider("Jitter", 0.00, 0.50, 0.12, 0.01)
+                    random_seed = st.number_input("Random seed", value=42, step=1)
+
+                    if st.button("Reset SEMUA ke nilai asli", type="primary"):
                         st.session_state.data_config = {}
                         st.rerun()
 
-                st.subheader("2️⃣ Edit Kotak per Group")
-                pilih_group = st.selectbox("Pilih Group untuk diedit:", 
-                                         options=[str(c) for c in cats])
+                st.subheader("Edit per kelompok")
 
-                if pilih_group:
-                    conf = st.session_state.data_config[pilih_group]
-                    orig = st.session_state.original_stats[pilih_group]
+                selected_group = st.selectbox(
+                    "Pilih kelompok yang ingin diedit",
+                    options=cat_strings
+                )
 
-                    st.info(f"**Mengedit:** {pilih_group}  (n = {conf['n']})")
+                if selected_group:
+                    edit_conf = st.session_state.data_config[selected_group]
+                    orig_conf = st.session_state.original_stats[selected_group]
 
-                    if st.button(f"⏪ Reset {pilih_group} ke Asli"):
-                        st.session_state.data_config[pilih_group] = orig.copy()
+                    st.info(f"**Kelompok:** {selected_group}   (n = {orig_conf['n']})")
+
+                    if st.button(f"Reset {selected_group} ke nilai asli"):
+                        st.session_state.data_config[selected_group] = orig_conf.copy()
                         st.rerun()
 
-                    new_width = st.slider("Lebar Kotak", 0.1, 1.0, float(conf['width']), 0.05)
+                    new_width = st.slider(
+                        "Lebar kotak",
+                        0.15, 1.0, float(edit_conf['width']), 0.05,
+                        key=f"width_{selected_group}"
+                    )
 
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        new_q3 = st.number_input("Q3 (Atas)", value=float(conf['q3']), format="%.4f")
-                        new_q1 = st.number_input("Q1 (Bawah)", value=float(conf['q1']), format="%.4f")
-                    with c2:
-                        new_med = st.number_input("Median", value=float(conf['med']), format="%.4f")
+                    cA, cB = st.columns(2)
+                    with cA:
+                        new_q3 = st.number_input("Q3", value=float(edit_conf['q3']), format="%.4f",
+                                               key=f"q3_{selected_group}")
+                        new_q1 = st.number_input("Q1", value=float(edit_conf['q1']), format="%.4f",
+                                               key=f"q1_{selected_group}")
+                    with cB:
+                        new_med = st.number_input("Median", value=float(edit_conf['med']), format="%.4f",
+                                                key=f"med_{selected_group}")
 
-                    # Simpan perubahan
-                    st.session_state.data_config[pilih_group].update({
-                        'q1': new_q1, 'q3': new_q3, 'med': new_med, 'width': new_width
+                    # Simpan perubahan ke config edit
+                    st.session_state.data_config[selected_group].update({
+                        'width': new_width,
+                        'q1': new_q1,
+                        'q3': new_q3,
+                        'med': new_med
                     })
 
-            # ==================== KANAN: Grafik + Download ====================
-            with col_kanan:
-                st.subheader("🖼️ Preview Grafik")
+            # ── KANAN : Grafik + Download ──
+            with right_col:
+                st.subheader("Preview grafik")
 
-                fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-                ax.set_facecolor('white')
+                fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-                for spine in ax.spines.values():
-                    spine.set_color('#555555')
-                    spine.set_linewidth(1.2)
+                ax.set_facecolor('#ffffff')
 
-                # Buat boxplot stats
-                bxp_stats = []
-                widths = []
-                for cat in cats:
-                    cat_str = str(cat)
-                    c = st.session_state.data_config[cat_str]
-                    bxp_stats.append({
+                bxp_list = []
+                box_widths = []
+
+                for cat_str in cat_strings:
+                    vals = st.session_state.data_config[cat_str]  # ← selalu pakai data edit
+                    bxp_list.append({
                         'label': cat_str,
-                        'med': c['med'],
-                        'q1': c['q1'],
-                        'q3': c['q3'],
-                        'whislo': c['whislo'],
-                        'whishi': c['whishi'],
+                        'med': vals['med'],
+                        'q1': vals['q1'],
+                        'q3': vals['q3'],
+                        'whislo': vals['whislo'],
+                        'whishi': vals['whishi'],
                         'fliers': []
                     })
-                    widths.append(c['width'])
+                    box_widths.append(vals['width'])
 
-                ax.bxp(bxp_stats, showfliers=False, widths=widths,
+                ax.bxp(bxp_list,
+                       positions=range(1, len(cat_strings)+1),
+                       widths=box_widths,
+                       showfliers=False,
                        patch_artist=True,
-                       boxprops=dict(facecolor='#E0E0E0', edgecolor='#333333'),
-                       medianprops=dict(color='red', linewidth=2.5),
-                       whiskerprops=dict(color='#333333', linewidth=1.2),
-                       capprops=dict(color='#333333', linewidth=1.2))
+                       boxprops=dict(facecolor='#d9e6ff', edgecolor='#4a6fa5'),
+                       medianprops=dict(color='#d32f2f', linewidth=2.5),
+                       whiskerprops=dict(color='#4a6fa5'),
+                       capprops=dict(color='#4a6fa5'))
 
-                # Scatter points
-                cat_map = {str(c): i+1 for i, c in enumerate(cats)}
-                df['x_idx'] = df[x_col].astype(str).map(cat_map)
+                # Scatter titik asli + jitter
+                cat_to_pos = {str(c): i+1 for i, c in enumerate(categories)}
+                df['pos'] = df[x_col].astype(str).map(cat_to_pos)
 
-                np.random.seed(seed)
-                noise = np.random.uniform(-jitter, jitter, len(df))
+                np.random.seed(random_seed)
+                jitter = np.random.uniform(-jitter_amount, jitter_amount, len(df))
 
-                ax.scatter(df['x_idx'] + noise, df[y_col],
-                           s=point_size**2, c='orange', edgecolor='darkred',
-                           linewidth=0.6, alpha=0.85, zorder=3)
+                ax.scatter(df['pos'] + jitter, df[y_col],
+                           s=point_size, color='orange', edgecolor='darkred',
+                           alpha=0.7, linewidth=0.6, zorder=10)
 
-                ax.set_xlabel(x_col, fontsize=12, fontweight='bold')
-                ax.set_ylabel(y_col, fontsize=12, fontweight='bold')
-                ax.grid(True, axis='y', alpha=0.3)
+                ax.set_xticks(range(1, len(cat_strings)+1))
+                ax.set_xticklabels(cat_strings, rotation=45, ha='right')
+                ax.set_xlabel(x_col)
+                ax.set_ylabel(y_col)
+                ax.grid(True, axis='y', alpha=0.3, linestyle='--')
 
                 st.pyplot(fig)
 
-                # ===================== DOWNLOAD =====================
-                st.write("---")
-                st.subheader("⬇️ Download")
+                st.divider()
+                st.subheader("Download")
 
-                d1, d2, d3 = st.columns([2, 1.4, 1.4])
+                dcol1, dcol2, dcol3 = st.columns([2, 1.3, 1.3])
 
-                with d1:
-                    dpi = st.selectbox("Resolusi Gambar", [300, 600, 900, 1200], index=1)
+                with dcol1:
+                    dpi_choice = st.selectbox("Resolusi gambar (DPI)", [150, 300, 600, 900], index=1)
 
-                with d2:
-                    buf_png = io.BytesIO()
-                    fig.savefig(buf_png, format='png', dpi=dpi, bbox_inches='tight')
-                    buf_png.seek(0)
+                with dcol2:
+                    buf_img = io.BytesIO()
+                    fig.savefig(buf_img, dpi=dpi_choice, bbox_inches='tight', format='png')
+                    buf_img.seek(0)
+
                     st.download_button(
-                        "📸 Download Grafik PNG",
-                        buf_png,
-                        f"boxplot_custom_{datetime.now().strftime('%Y%m%d_%H%M')}.png",
-                        "image/png",
+                        label="⬇️ Grafik (PNG)",
+                        data=buf_img,
+                        file_name=f"boxplot_{datetime.now().strftime('%Y%m%d_%H%M')}.png",
+                        mime="image/png",
                         use_container_width=True
                     )
 
-                with d3:
-                    # Buat data export
-                    rows = []
-                    for cat_str in sorted(st.session_state.data_config.keys(), key=natural_sort_key):
-                        c = st.session_state.data_config[cat_str]
+                with dcol3:
+                    # ── Download Data Asli ──
+                    asli_rows = []
+                    for cat_str in cat_strings:
                         o = st.session_state.original_stats[cat_str]
-
-                        changed = (abs(c['med'] - o['med']) > 1e-6 or
-                                  abs(c['q1'] - o['q1']) > 1e-6 or
-                                  abs(c['q3'] - o['q3']) > 1e-6 or
-                                  abs(c['width'] - o['width']) > 1e-6)
-
-                        rows.append({
+                        asli_rows.append({
                             'Group': cat_str,
                             'n': o['n'],
-                            'Median_Asli': round(o['med'], 4),
-                            'Q1_Asli': round(o['q1'], 4),
-                            'Q3_Asli': round(o['q3'], 4),
-                            'Min_Asli': round(o['whislo'], 4),
-                            'Max_Asli': round(o['whishi'], 4),
-                            'Lebar_Asli': round(o['width'], 3),
-                            '→': '→',
-                            'Median_Hasil': round(c['med'], 4),
-                            'Q1_Hasil': round(c['q1'], 4),
-                            'Q3_Hasil': round(c['q3'], 4),
-                            'Min_Hasil': round(c['whislo'], 4),
-                            'Max_Hasil': round(c['whishi'], 4),
-                            'Lebar_Hasil': round(c['width'], 3),
-                            'Status': 'Diubah' if changed else 'Tidak Berubah'
+                            'Median': round(o['med'], 4),
+                            'Q1': round(o['q1'], 4),
+                            'Q3': round(o['q3'], 4),
+                            'Min_whisker': round(o['whislo'], 4),
+                            'Max_whisker': round(o['whishi'], 4),
+                            'Lebar_kotak': round(o['width'], 3)
                         })
 
-                    df_export = pd.DataFrame(rows)
+                    df_asli = pd.DataFrame(asli_rows)
 
-                    buf_csv = io.BytesIO()
-                    df_export.to_csv(buf_csv, index=False, encoding='utf-8-sig')
-                    buf_csv.seek(0)
+                    buf_asli = io.BytesIO()
+                    df_asli.to_csv(buf_asli, index=False, encoding='utf-8-sig')
+                    buf_asli.seek(0)
 
                     st.download_button(
-                        "📊 Download Data (Asli vs Hasil)",
-                        buf_csv,
-                        f"boxplot_asli_vs_custom_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                        "text/csv",
+                        label="⬇️ Data Asli (original)",
+                        data=buf_asli,
+                        file_name=f"boxplot_original_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                        mime="text/csv",
                         use_container_width=True,
-                        help="File ini selalu menyertakan data asli dan hasil edit"
+                        help="Statistik langsung dari file upload"
                     )
 
-    except Exception as e:
-        st.error(f"Terjadi kesalahan: {e}")
-        if st.button("Reset Aplikasi"):
-            st.session_state.clear()
+                    # ── Download Data Edit / Custom ──
+                    edit_rows = []
+                    for cat_str in cat_strings:
+                        e = st.session_state.data_config[cat_str]
+                        edit_rows.append({
+                            'Group': cat_str,
+                            'n': e['n'],
+                            'Median': round(e['med'], 4),
+                            'Q1': round(e['q1'], 4),
+                            'Q3': round(e['q3'], 4),
+                            'Min_whisker': round(e['whislo'], 4),
+                            'Max_whisker': round(e['whishi'], 4),
+                            'Lebar_kotak': round(e['width'], 3)
+                        })
+
+                    df_edit = pd.DataFrame(edit_rows)
+
+                    buf_edit = io.BytesIO()
+                    df_edit.to_csv(buf_edit, index=False, encoding='utf-8-sig')
+                    buf_edit.seek(0)
+
+                    st.download_button(
+                        label="⬇️ Data Edit (custom)",
+                        data=buf_edit,
+                        file_name=f"boxplot_edited_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        help="Statistik yang digunakan di grafik (hasil edit)"
+                    )
+
+    except Exception as err:
+        st.error(f"Terjadi kesalahan: {err}")
+        if st.button("Reset aplikasi"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
             st.rerun()
