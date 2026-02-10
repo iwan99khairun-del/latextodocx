@@ -4,13 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import io
-import re # Modul untuk mencari angka dalam teks
+import re
 
 # --- SETUP HALAMAN ---
 st.set_page_config(page_title="Replika R - Edit Per Group", layout="wide")
 st.title("📊 Grafik Box-and-Whisker Plot")
 
-# CSS Supaya input angka lebih compact
 st.markdown("""
 <style>
     .stNumberInput input { background-color: #f0f2f6; }
@@ -18,55 +17,54 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FUNGSI PENGURUTAN ALAMI (NATURAL SORT) ---
-# Supaya "5 gy" tidak ditaruh di belakang "10 gy"
+# --- FUNGSI PENGURUTAN ALAMI ---
 def natural_sort_key(s):
     s = str(s)
-    # Cari angka dalam teks (misal "5" dari "5 gy")
     angka = re.search(r'(\d+)', s)
     if angka:
-        return int(angka.group(1)) # Urutkan berdasarkan nilai angkanya
-    return s # Kalau tidak ada angka, urutkan sesuai abjad biasa
+        return int(angka.group(1))
+    return s
 
 # --- 1. UPLOAD FILE ---
 uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
 
 if uploaded_file:
     try:
-        # --- BACA DATA ---
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=0)
         else:
             df = pd.read_excel(uploaded_file, header=0)
 
-        # Bersihkan nama kolom
         df.columns = df.columns.astype(str).str.strip()
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
         
         # --- PILIH KOLOM ---
         c1, c2 = st.columns(2)
         with c1:
-            x_col = st.selectbox("Sumbu X (Kategori):", df.columns)
+            x_col = st.selectbox("Sumbu X (Kategori):", df.columns, key="x_col_select")
         with c2:
-            y_col = st.selectbox("Sumbu Y (Angka):", df.columns, index=1 if len(df.columns) > 1 else 0)
+            y_col = st.selectbox("Sumbu Y (Angka):", df.columns, index=1 if len(df.columns) > 1 else 0, key="y_col_select")
 
         if x_col and y_col:
+            # RESET LOGIC: Jika kolom berubah, hapus config lama
+            current_cols = f"{x_col}_{y_col}_{uploaded_file.name}"
+            if 'last_state_key' not in st.session_state or st.session_state['last_state_key'] != current_cols:
+                st.session_state['data_config'] = {}
+                st.session_state['last_state_key'] = current_cols
+
             df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
             df = df.dropna(subset=[x_col, y_col])
             
-            # --- 2. LOGIKA URUTAN GROUP (PERBAIKAN UTAMA DI SINI) ---
             raw_cats = df[x_col].unique()
-            # Kita urutkan pakai fungsi natural_sort_key di atas
             cats = sorted(raw_cats, key=natural_sort_key)
 
-            # --- 3. INISIALISASI DATA DI MEMORY ---
             if 'data_config' not in st.session_state:
                 st.session_state['data_config'] = {}
             
-            # Simpan data asli ke memory jika belum ada
             for cat in cats:
                 cat_str = str(cat)
-                if cat_str not in st.session_state['data_config']:
+                # Pastikan key 'width' selalu ada (mengatasi KeyError)
+                if cat_str not in st.session_state['data_config'] or 'width' not in st.session_state['data_config'][cat_str]:
                     sub_data = df[df[x_col] == cat][y_col]
                     stats = sub_data.describe()
                     
@@ -79,12 +77,10 @@ if uploaded_file:
                         'width': 0.65
                     }
 
-            # --- LAYOUT KIRI (MENU) & KANAN (GAMBAR) ---
             st.write("---")
             col_kiri, col_kanan = st.columns([1, 2])
 
             with col_kiri:
-                # A. GLOBAL SETTINGS
                 with st.expander("1️⃣ Pengaturan Gambar (Global)", expanded=False):
                     fig_w = st.slider("Lebar Gambar", 3.0, 15.0, 6.0)
                     fig_h = st.slider("Tinggi Gambar", 3.0, 10.0, 5.0)
@@ -92,11 +88,9 @@ if uploaded_file:
                     jitter_val = st.slider("Jitter (Sebaran)", 0.0, 0.4, 0.12)
                     seed_val = st.number_input("Seed (Acak)", value=42)
 
-                # B. EDIT PER GROUP
                 st.write("")
                 st.subheader("2️⃣ Edit Kotak")
                 
-                # Dropdown mengikuti urutan yang sudah diperbaiki (cats)
                 pilih_group = st.selectbox(
                     "Pilih Group yang mau diedit:",
                     options=[str(c) for c in cats]
@@ -104,38 +98,40 @@ if uploaded_file:
 
                 if pilih_group:
                     st.info(f"🛠️ Sedang mengedit: **{pilih_group}**")
-                    current_conf = st.session_state['data_config'][pilih_group]
+                    # Menggunakan .get() untuk keamanan tambahan
+                    conf = st.session_state['data_config'].get(pilih_group, {})
                     
-                    new_width = st.slider(f"Lebar Kotak ({pilih_group})", 0.1, 1.0, current_conf['width'])
+                    # Cek jika data ada, jika tidak beri default
+                    w_val = conf.get('width', 0.65)
+                    q3_val = conf.get('q3', 0.0)
+                    q1_val = conf.get('q1', 0.0)
+                    med_val = conf.get('med', 0.0)
+
+                    new_width = st.slider(f"Lebar Kotak ({pilih_group})", 0.1, 1.0, float(w_val))
                     
                     c_h1, c_h2 = st.columns(2)
                     with c_h1:
-                        new_q3 = st.number_input("Atas (Q3)", value=current_conf['q3'])
-                        new_q1 = st.number_input("Bawah (Q1)", value=current_conf['q1'])
+                        new_q3 = st.number_input("Atas (Q3)", value=float(q3_val))
+                        new_q1 = st.number_input("Bawah (Q1)", value=float(q1_val))
                     with c_h2:
-                        new_med = st.number_input("Tengah (Median)", value=current_conf['med'])
+                        new_med = st.number_input("Tengah (Median)", value=float(med_val))
                     
-                    # Update Memory
                     st.session_state['data_config'][pilih_group].update({
                         'width': new_width, 'q3': new_q3, 'q1': new_q1, 'med': new_med
                     })
 
             with col_kanan:
-                # C. GAMBAR
                 st.subheader("🖼️ Preview Grafik")
                 fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-                
                 ax.set_facecolor('white')
                 for spine in ax.spines.values():
                     spine.set_visible(True)
                     spine.set_color('#595959')
                     spine.set_linewidth(1)
 
-                # SIAPKAN DATA UTK BOXPLOT
                 bxp_stats = []
                 list_widths = []
                 
-                # Loop berdasarkan 'cats' yang SUDAH DIURUTKAN BENAR
                 for cat in cats:
                     cat_str = str(cat)
                     conf = st.session_state['data_config'][cat_str]
@@ -148,9 +144,8 @@ if uploaded_file:
                         'whishi': conf['whishi'],
                         'fliers': []
                     })
-                    list_widths.append(conf['width'])
+                    list_widths.append(conf.get('width', 0.65))
 
-                # GAMBAR KOTAK
                 ax.bxp(bxp_stats, showfliers=False, widths=list_widths,
                        patch_artist=True,
                        boxprops=dict(facecolor='#CCCCCC', edgecolor='#595959', linewidth=0.9),
@@ -158,8 +153,6 @@ if uploaded_file:
                        whiskerprops=dict(color='#595959', linewidth=0.9),
                        capprops=dict(color='#595959', linewidth=0.9))
 
-                # GAMBAR TITIK (Mapping index sesuai urutan cats)
-                # Kuncinya di sini: cat_map mengikuti urutan cats yang benar
                 cat_map = {str(c): i+1 for i, c in enumerate(cats)}
                 df['x_idx'] = df[x_col].apply(lambda x: cat_map[str(x)])
                 
@@ -173,10 +166,8 @@ if uploaded_file:
 
                 ax.set_xlabel(x_col, fontweight='bold')
                 ax.set_ylabel(y_col, fontweight='bold')
-                
                 st.pyplot(fig)
 
-                # DOWNLOAD
                 st.write("---")
                 col_d1, col_d2 = st.columns([2, 1])
                 with col_d1:
@@ -189,4 +180,8 @@ if uploaded_file:
                     st.download_button("⬇️ Download PNG", buf, "grafik_urut.png", "image/png", use_container_width=True)
 
     except Exception as e:
-        st.error(f"Eror: {e}")
+        st.error(f"Sistem Error: {e}")
+        # Tombol darurat untuk reset jika stuck
+        if st.button("🔄 Reset Data Cache"):
+            st.session_state.clear()
+            st.rerun()
