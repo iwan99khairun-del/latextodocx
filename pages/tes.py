@@ -4,29 +4,40 @@ import matplotlib.pyplot as plt
 import io
 import re
 from datetime import datetime
+import numpy as np
 
 st.set_page_config(page_title="Boxplot Editor - Edit & Upload Kembali", layout="wide")
 st.title("📊 Boxplot Editor – Edit Kotak → Download → Upload Lagi → Grafik Sama Persis")
 
-# Fungsi pengurutan natural (biar group seperti A1, A2, A10 urut benar)
+# Fungsi pengurutan natural
 def natural_sort_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
 
-# Upload file CSV
-uploaded_file = st.file_uploader("Upload CSV data mentah atau CSV konfigurasi kotak custom", type=["csv"])
+# Upload file (sekarang support CSV dan XLSX)
+uploaded_file = st.file_uploader(
+    "Upload file data mentah (.csv / .xlsx) atau konfigurasi kotak custom (.csv)",
+    type=["csv", "xlsx"]
+)
 
 if uploaded_file is not None:
     try:
-        df_upload = pd.read_csv(uploaded_file)
+        file_name = uploaded_file.name.lower()
+
+        # Baca file sesuai ekstensi
+        if file_name.endswith('.csv'):
+            df_upload = pd.read_csv(uploaded_file)
+        else:  # .xlsx
+            df_upload = pd.read_excel(uploaded_file)
+
         df_upload.columns = df_upload.columns.str.strip()
 
-        # Deteksi apakah ini file konfigurasi custom (harus punya kolom ini)
+        # Deteksi apakah ini file konfigurasi custom (hanya untuk .csv)
         custom_cols = ['Group', 'Median', 'Q1', 'Q3', 'Lebar_kotak']
-        is_custom = all(col in df_upload.columns for col in custom_cols)
+        is_custom = file_name.endswith('.csv') and all(col in df_upload.columns for col in custom_cols)
 
         if is_custom:
-            # Mode: upload konfigurasi custom → langsung pakai nilai edit
-            st.success("✅ File konfigurasi custom terdeteksi! Grafik akan pakai nilai yang sudah diedit sebelumnya.")
+            # Mode custom: langsung pakai nilai edit sebelumnya
+            st.success("✅ File konfigurasi custom (.csv) terdeteksi! Grafik akan pakai kotak yang sudah diedit.")
 
             config = {}
             groups = []
@@ -43,15 +54,15 @@ if uploaded_file is not None:
                 }
 
             groups = sorted(groups, key=natural_sort_key)
-            has_raw_data = False  # Tidak ada titik scatter di mode custom
+            has_raw_data = False  # Tidak ada scatter di mode custom
 
         else:
-            # Mode: data mentah → pilih kolom & hitung stats awal
-            st.info("📄 File data mentah terdeteksi. Pilih kolom untuk grafik.")
+            # Mode data mentah (.csv atau .xlsx)
+            st.info("📄 File data mentah terdeteksi. Pilih kolom untuk membuat grafik.")
 
             col1, col2 = st.columns(2)
             with col1:
-                x_col = st.selectbox("Kolom kategori (Group / X)", df_upload.columns)
+                x_col = st.selectbox("Kolom kategori / Group (X)", df_upload.columns)
             with col2:
                 y_col = st.selectbox("Kolom nilai numerik (Y)", df_upload.columns, index=1 if len(df_upload.columns) > 1 else 0)
 
@@ -66,9 +77,15 @@ if uploaded_file is not None:
                 groups_raw = sorted(df_upload[x_col].unique(), key=natural_sort_key)
                 groups = [str(g) for g in groups_raw]
 
-                # Inisialisasi config (pakai session_state biar tetap saat rerun)
+                # Config disimpan di session_state
                 if 'config' not in st.session_state:
                     st.session_state.config = {}
+
+                # Reset config jika file baru
+                current_key = uploaded_file.name
+                if 'last_file' not in st.session_state or st.session_state.last_file != current_key:
+                    st.session_state.config = {}
+                    st.session_state.last_file = current_key
 
                 for g in groups:
                     if g not in st.session_state.config:
@@ -86,7 +103,7 @@ if uploaded_file is not None:
                 config = st.session_state.config
                 has_raw_data = True
 
-        # Jika sudah punya groups & config → tampilkan grafik & edit
+        # Tampilkan grafik jika sudah siap
         if 'groups' in locals() and groups and 'config' in locals():
             st.divider()
 
@@ -99,12 +116,12 @@ if uploaded_file is not None:
                     if has_raw_data:
                         point_size = st.slider("Ukuran titik scatter", 10, 100, 40, 5)
                         jitter_val = st.slider("Jitter titik", 0.0, 0.4, 0.1, 0.02)
-                        seed = st.number_input("Seed random jitter", value=42, step=1)
+                        seed = st.number_input("Seed random", value=42, step=1)
 
-                # Edit hanya aktif di mode data mentah
+                # Edit hanya untuk mode data mentah
                 if not is_custom:
                     st.subheader("✏️ Edit Kotak per Group")
-                    selected_group = st.selectbox("Pilih group untuk diedit", groups)
+                    selected_group = st.selectbox("Pilih group", groups)
 
                     if selected_group:
                         current = config[selected_group]
@@ -117,7 +134,6 @@ if uploaded_file is not None:
                         with col_b:
                             new_med = st.number_input("Median", value=current['med'], format="%.4f")
 
-                        # Simpan perubahan
                         config[selected_group].update({
                             'width': new_width,
                             'q1': new_q1,
@@ -131,7 +147,7 @@ if uploaded_file is not None:
                 fig, ax = plt.subplots(figsize=(fig_width, fig_height))
                 ax.set_facecolor('#fafafa')
 
-                # Boxplot dari config (selalu pakai nilai edit)
+                # Boxplot dari config (selalu nilai edit)
                 bxp_stats = []
                 widths = []
                 for g in groups:
@@ -153,9 +169,8 @@ if uploaded_file is not None:
                        whiskerprops=dict(color='#1976d2', linewidth=1.2),
                        capprops=dict(color='#1976d2', linewidth=1.2))
 
-                # Titik scatter (hanya jika ada data mentah)
+                # Scatter jika ada data mentah
                 if has_raw_data:
-                    import numpy as np
                     np.random.seed(seed)
                     pos_map = {g: i+1 for i, g in enumerate(groups)}
                     df_raw['pos'] = df_raw[x_col].astype(str).map(pos_map)
@@ -188,7 +203,6 @@ if uploaded_file is not None:
                                        "image/png")
 
                 with d2:
-                    # Download konfigurasi kotak (untuk upload ulang)
                     export_data = []
                     for g in groups:
                         c = config[g]
@@ -211,11 +225,11 @@ if uploaded_file is not None:
                                        buf_csv,
                                        f"boxplot_custom_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                                        "text/csv",
-                                       help="Upload file CSV ini lagi → grafik akan sama persis seperti sekarang!")
+                                       help="Upload CSV ini lagi → grafik langsung sama persis!")
 
     except Exception as e:
         st.error(f"Error: {e}")
-        st.info("Coba cek format file CSV (header harus benar, nilai numerik tidak boleh ada teks).")
+        st.info("Pastikan file .xlsx/.csv punya header yang benar dan kolom numerik valid.")
 
 else:
-    st.info("Upload file CSV dulu ya untuk mulai.")
+    st.info("Upload file .csv atau .xlsx dulu untuk mulai.")
