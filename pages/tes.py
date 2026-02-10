@@ -39,15 +39,17 @@ if uploaded_file:
         df.columns = df.columns.astype(str).str.strip()
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
-        # CEK APAKAH INI FILE HASIL DOWNLOAD (PRE-CALCULATED)
-        is_summary_file = all(col in df.columns for col in ['Group_Name', 'med', 'q1', 'q3'])
+        # DETEKSI FILE HASIL EDIT (Berdasarkan kolom khusus)
+        is_edited_file = 'Is_Edited_Summary' in df.columns
 
-        if is_summary_file:
-            st.success("✅ File hasil kustomisasi terdeteksi. Menggunakan data yang tersimpan.")
-            x_col = "Group_Name"
-            y_col = "med" # Default penunjuk saja
+        if is_edited_file:
+            st.success("✅ File hasil edit terdeteksi. Mengembalikan tampilan sesuai simpanan terakhir.")
+            # Ambil nama kolom asli dari baris pertama data edit
+            x_col = df['Original_X_Label'].iloc[0]
+            y_col = df['Original_Y_Label'].iloc[0]
+            cats = df['Group_Name'].tolist()
         else:
-            # --- PILIH KOLOM (Data Mentah Biasa) ---
+            # --- PILIH KOLOM (Untuk Data Mentah) ---
             c1, c2 = st.columns(2)
             with c1:
                 x_col = st.selectbox("Sumbu X (Kategori):", df.columns, key="x_col_select")
@@ -61,31 +63,27 @@ if uploaded_file:
                 st.session_state['data_config'] = {}
                 st.session_state['last_state_key'] = current_cols
 
-            # Proses data jika bukan summary file
-            if not is_summary_file:
+            if not is_edited_file:
                 df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
                 df = df.dropna(subset=[x_col, y_col])
                 raw_cats = df[x_col].unique()
                 cats = sorted(raw_cats, key=natural_sort_key)
-            else:
-                cats = df[x_col].tolist()
 
             if 'data_config' not in st.session_state:
                 st.session_state['data_config'] = {}
             
-            # INISIALISASI SESSION STATE
+            # INISIALISASI/UPDATE SESSION STATE (Fix KeyError 'width')
             for _, row in df.iterrows():
-                cat_str = str(row[x_col])
-                if cat_str not in st.session_state['data_config']:
-                    if is_summary_file:
-                        # Ambil langsung dari file hasil download
+                cat_str = str(row['Group_Name']) if is_edited_file else str(row[x_col])
+                
+                if cat_str not in st.session_state['data_config'] or 'width' not in st.session_state['data_config'][cat_str]:
+                    if is_edited_file:
                         st.session_state['data_config'][cat_str] = {
                             'med': float(row['med']), 'q1': float(row['q1']), 'q3': float(row['q3']),
                             'whislo': float(row['whislo']), 'whishi': float(row['whishi']),
                             'width': float(row['width'])
                         }
                     else:
-                        # Hitung dari data mentah
                         sub_data = df[df[x_col] == row[x_col]][y_col]
                         stats = sub_data.describe()
                         st.session_state['data_config'][cat_str] = {
@@ -108,16 +106,12 @@ if uploaded_file:
                         st.rerun()
 
                 st.subheader("2️⃣ Edit Kotak")
-                pilih_group = st.selectbox("Pilih Group yang mau diedit:", options=[str(c) for c in cats])
+                pilih_group = st.selectbox("Pilih Group:", options=[str(c) for c in cats])
 
                 if pilih_group:
                     conf = st.session_state['data_config'].get(pilih_group)
                     
-                    if not is_summary_file:
-                        if st.button(f"⏪ Reset {pilih_group} ke Nilai Asli"):
-                            del st.session_state['data_config'][pilih_group]
-                            st.rerun()
-
+                    # Tampilkan Slider Edit
                     new_width = st.slider(f"Lebar Kotak", 0.1, 1.0, float(conf['width']))
                     c_h1, c_h2 = st.columns(2)
                     with c_h1:
@@ -135,36 +129,32 @@ if uploaded_file:
                 fig, ax = plt.subplots(figsize=(fig_w, fig_h))
                 ax.set_facecolor('white')
                 
-                for spine in ax.spines.values():
-                    spine.set_visible(True)
-                    spine.set_color('#595959')
-                    spine.set_linewidth(1)
-
+                # Plot Boxplot
                 bxp_stats = []
                 list_widths = []
                 for cat in cats:
-                    cat_str = str(cat)
-                    c = st.session_state['data_config'][cat_str]
+                    c_str = str(cat)
+                    c = st.session_state['data_config'][c_str]
                     bxp_stats.append({
-                        'label': cat_str, 'med': c['med'], 'q1': c['q1'], 'q3': c['q3'],
+                        'label': c_str, 'med': c['med'], 'q1': c['q1'], 'q3': c['q3'],
                         'whislo': c['whislo'], 'whishi': c['whishi'], 'fliers': []
                     })
                     list_widths.append(c['width'])
 
                 ax.bxp(bxp_stats, showfliers=False, widths=list_widths, patch_artist=True,
                        boxprops=dict(facecolor='#CCCCCC', edgecolor='#595959', linewidth=0.9),
-                       medianprops=dict(color='#595959', linewidth=2))
+                       medianprops=dict(color='red', linewidth=2))
 
-                # Hanya tampilkan scatter jika bukan summary file
-                if not is_summary_file:
+                # Plot Scatter (Hanya jika ada data mentah)
+                if not is_edited_file:
                     cat_map = {str(c): i+1 for i, c in enumerate(cats)}
                     df['x_idx'] = df[x_col].astype(str).apply(lambda x: cat_map[x])
                     np.random.seed(int(seed_val))
                     noise = np.random.uniform(-jitter_val, jitter_val, size=len(df))
-                    ax.scatter(df['x_idx'] + noise, df[y_col], s=point_size**1.5, c='orange', alpha=0.8, zorder=3)
+                    ax.scatter(df['x_idx'] + noise, df[y_col], s=point_size**1.5, c='orange', alpha=0.6, zorder=3)
 
                 ax.set_xlabel(x_col, fontweight='bold')
-                ax.set_ylabel(y_col if not is_summary_file else "Nilai Statistik", fontweight='bold')
+                ax.set_ylabel(y_col, fontweight='bold')
                 st.pyplot(fig)
 
                 # --- DOWNLOAD SECTION ---
@@ -176,31 +166,29 @@ if uploaded_file:
                     st.write("**Gambar (PNG)**")
                     buf_img = io.BytesIO()
                     fig.savefig(buf_img, format="png", dpi=300, bbox_inches='tight')
-                    st.download_button("⬇️ Download Gambar", buf_img.getvalue(), "grafik_output.png", "image/png")
+                    st.download_button("⬇️ Download Gambar", buf_img.getvalue(), "grafik.png", "image/png")
 
                 with d_col2:
-                    st.write("**Data Output (Upload-able)**")
-                    # Buat DataFrame untuk Export
+                    st.write("**Data Edit (Bisa di-upload kembali)**")
+                    # Buat file CSV yang menyimpan nama label asli agar tidak berubah saat di-upload
                     export_rows = []
                     for cat_name in cats:
                         c_str = str(cat_name)
                         vals = st.session_state['data_config'][c_str]
-                        row = {'Group_Name': c_str, **vals}
+                        row = {
+                            'Is_Edited_Summary': True,
+                            'Original_X_Label': x_col,
+                            'Original_Y_Label': y_col,
+                            'Group_Name': c_str,
+                            **vals
+                        }
                         export_rows.append(row)
                     
-                    df_export = pd.DataFrame(export_rows)
-                    csv_final = df_export.to_csv(index=False).encode('utf-8')
-                    
-                    st.download_button(
-                        label="⬇️ Download Data Edit (.csv)",
-                        data=csv_final,
-                        file_name="data_grafik_output.csv",
-                        mime="text/csv",
-                        help="Simpan file ini. Jika Anda upload file ini kembali ke aplikasi, grafik akan langsung muncul sesuai hasil edit Anda."
-                    )
+                    csv_data = pd.DataFrame(export_rows).to_csv(index=False).encode('utf-8')
+                    st.download_button("⬇️ Download Data (.csv)", csv_data, "data_edit_berkelanjutan.csv", "text/csv")
 
     except Exception as e:
-        st.error(f"Terjadi kesalahan: {e}")
-        if st.button("🔄 Reset Paksa Aplikasi"):
+        st.error(f"Eror: {e}")
+        if st.button("🔄 Reset Paksa"):
             st.session_state.clear()
             st.rerun()
