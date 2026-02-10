@@ -4,12 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import io
 import re
-import json
-import copy  # Untuk deep copy original config
+import copy
 
 # --- SETUP HALAMAN ---
-st.set_page_config(page_title="Replika R - Edit Per Group", layout="wide")
-st.title("📊 Grafik Box-and-Whisker Plot dengan Edit Persisten")
+st.set_page_config(page_title="Replika R - Edit Boxplot Persisten di Data", layout="wide")
+st.title("📊 Grafik Box-and-Whisker Plot dengan Edit Tersimpan di File Data")
 st.markdown("""
 <style>
     .stNumberInput input { background-color: #f0f2f6; }
@@ -27,14 +26,42 @@ def natural_sort_key(s):
     return s
 
 # --- 1. UPLOAD FILE ---
-uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload File Excel/CSV (jika Excel dengan sheet 'BoxplotConfig' → edit sebelumnya akan otomatis muncul)", type=["xlsx", "csv"])
 
 if uploaded_file:
     try:
+        # Baca data
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=0)
+            loaded_config = None
+            st.info("📄 File CSV → tidak ada config edit sebelumnya. Edit baru akan dimulai dari data asli.")
         else:
-            df = pd.read_excel(uploaded_file, header=0)
+            # Excel: coba baca sheet config jika ada
+            xls = pd.ExcelFile(uploaded_file)
+            if 'DataPoints' in xls.sheet_names:
+                df = pd.read_excel(uploaded_file, sheet_name='DataPoints')
+            else:
+                df = pd.read_excel(uploaded_file, sheet_name=0)  # sheet pertama
+            
+            if 'BoxplotConfig' in xls.sheet_names:
+                config_df = pd.read_excel(uploaded_file, sheet_name='BoxplotConfig')
+                # Convert ke dict {group_str: {stats}}
+                loaded_config = {}
+                for _, row in config_df.iterrows():
+                    group = str(row['Group'])
+                    loaded_config[group] = {
+                        'med': float(row['med']),
+                        'q1': float(row['q1']),
+                        'q3': float(row['q3']),
+                        'whislo': float(row['whislo']),
+                        'whishi': float(row['whishi']),
+                        'width': float(row['width'])
+                    }
+                st.success("✅ Config edit sebelumnya ditemukan di sheet 'BoxplotConfig' → kotak akan persis seperti editan terakhir!")
+            else:
+                loaded_config = None
+                st.info("📄 File Excel tanpa sheet 'BoxplotConfig' → mulai dari data asli.")
+
         df.columns = df.columns.astype(str).str.strip()
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
        
@@ -46,7 +73,7 @@ if uploaded_file:
             y_col = st.selectbox("Sumbu Y (Angka):", df.columns, index=1 if len(df.columns) > 1 else 0, key="y_col_select")
         
         if x_col and y_col:
-            # RESET LOGIC: Jika file/kolom berubah → reset semua config
+            # Reset jika file/kolom berubah
             current_key = f"{x_col}_{y_col}_{uploaded_file.name}"
             if 'last_state_key' not in st.session_state or st.session_state.last_state_key != current_key:
                 st.session_state.data_config = {}
@@ -59,59 +86,34 @@ if uploaded_file:
             raw_cats = df[x_col].unique()
             cats = sorted(raw_cats, key=natural_sort_key)
             
-            # Inisialisasi original_config (selalu dari data asli saat ini)
-            if not st.session_state.original_config:
-                for cat in cats:
-                    cat_str = str(cat)
-                    sub_data = df[df[x_col] == cat][y_col]
-                    stats = sub_data.describe()
-                    st.session_state.original_config[cat_str] = {
-                        'med': float(stats['50%']),
-                        'q1': float(stats['25%']),
-                        'q3': float(stats['75%']),
-                        'whislo': float(stats['min']),
-                        'whishi': float(stats['max']),
-                        'width': 0.65
-                    }
+            # Hitung original config dari data asli (selalu)
+            st.session_state.original_config = {}
+            for cat in cats:
+                cat_str = str(cat)
+                sub_data = df[df[x_col] == cat][y_col]
+                stats = sub_data.describe()
+                st.session_state.original_config[cat_str] = {
+                    'med': float(stats['50%']),
+                    'q1': float(stats['25%']),
+                    'q3': float(stats['75%']),
+                    'whislo': float(stats['min']),
+                    'whishi': float(stats['max']),
+                    'width': 0.65
+                }
             
-            # Inisialisasi data_config (bisa dari original atau dari edit sebelumnya)
-            if not st.session_state.data_config:
+            # Inisialisasi data_config: prioritaskan loaded_config → fallback ke original
+            if 'data_config' not in st.session_state or not st.session_state.data_config:
                 st.session_state.data_config = copy.deepcopy(st.session_state.original_config)
+                if loaded_config:
+                    for cat_str, vals in loaded_config.items():
+                        if cat_str in st.session_state.data_config:
+                            st.session_state.data_config[cat_str].update(vals)
             
-            # Tambahkan group baru jika ada (misalnya data berubah sedikit)
+            # Tambah group baru jika ada
             for cat in cats:
                 cat_str = str(cat)
                 if cat_str not in st.session_state.data_config:
-                    sub_data = df[df[x_col] == cat][y_col]
-                    stats = sub_data.describe()
-                    vals = {
-                        'med': float(stats['50%']),
-                        'q1': float(stats['25%']),
-                        'q3': float(stats['75%']),
-                        'whislo': float(stats['min']),
-                        'whishi': float(stats['max']),
-                        'width': 0.65
-                    }
-                    st.session_state.original_config[cat_str] = vals
-                    st.session_state.data_config[cat_str] = vals.copy()
-            
-            # --- UPLOAD CONFIG JSON (untuk melanjutkan edit sebelumnya) ---
-            st.write("---")
-            config_file = st.file_uploader(
-                "📂 Upload Config Edit Sebelumnya (JSON) → kotak yang diedit akan kembali persis sama",
-                type=["json"],
-                key="config_uploader"
-            )
-            if config_file is not None:
-                try:
-                    loaded_config = json.load(config_file)
-                    for cat_str, values in loaded_config.items():
-                        if cat_str in st.session_state.data_config:
-                            st.session_state.data_config[cat_str].update(values)
-                    st.success("✅ Config berhasil dimuat! Kotak yang pernah diedit sekarang persis seperti sebelumnya.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Gagal memuat config: {e}")
+                    st.session_state.data_config[cat_str] = st.session_state.original_config[cat_str].copy()
             
             st.write("---")
             col_kiri, col_kanan = st.columns([1, 2])
@@ -130,18 +132,13 @@ if uploaded_file:
                 
                 st.write("")
                 st.subheader("2️⃣ Edit Kotak & Whisker")
-                st.caption("🔹 Kotak dengan tanda `*` pada label berarti telah diedit manual")
+                st.caption("🔹 Label dengan `*` = kotak telah diedit manual (berbeda dari data asli)")
                 
-                pilih_group = st.selectbox(
-                    "Pilih Group:",
-                    options=[str(c) for c in cats]
-                )
+                pilih_group = st.selectbox("Pilih Group:", options=[str(c) for c in cats])
                 if pilih_group:
                     conf = st.session_state.data_config[pilih_group]
                     orig = st.session_state.original_config[pilih_group]
-                    
-                    # Cek apakah sedang diedit
-                    is_edited = any(conf[k] != orig[k] for k in conf)
+                    is_edited = any(abs(conf[k] - orig[k]) > 1e-6 for k in conf)  # toleransi float
                     st.info(f"🛠️ Sedang mengedit: **{pilih_group}** {'(✅ Sudah diedit)' if is_edited else '(Belum diedit)'}")
                     
                     if st.button(f"⏪ Reset {pilih_group} ke Asli"):
@@ -159,7 +156,6 @@ if uploaded_file:
                         new_q3 = st.number_input("Q3 (Atas)", value=conf['q3'], format="%.4f", key=f"q3_{pilih_group}")
                         new_whishi = st.number_input("Whisker Atas (Max)", value=conf['whishi'], format="%.4f", key=f"whishi_{pilih_group}")
                     
-                    # Simpan perubahan
                     st.session_state.data_config[pilih_group].update({
                         'width': new_width, 'q1': new_q1, 'med': new_med,
                         'q3': new_q3, 'whislo': new_whislo, 'whishi': new_whishi
@@ -182,18 +178,13 @@ if uploaded_file:
                     cat_str = str(cat)
                     c = st.session_state.data_config[cat_str]
                     o = st.session_state.original_config[cat_str]
-                    
-                    # Tanda edited dengan *
-                    is_edited = any(c[k] != o[k] for k in c)
+                    is_edited = any(abs(c[k] - o[k]) > 1e-6 for k in c)
                     label = cat_str + (" *" if is_edited else "")
                     
                     bxp_stats.append({
                         'label': label,
-                        'med': c['med'],
-                        'q1': c['q1'],
-                        'q3': c['q3'],
-                        'whislo': c['whislo'],
-                        'whishi': c['whishi'],
+                        'med': c['med'], 'q1': c['q1'], 'q3': c['q3'],
+                        'whislo': c['whislo'], 'whishi': c['whishi'],
                         'fliers': []
                     })
                     list_widths.append(c['width'])
@@ -233,29 +224,47 @@ if uploaded_file:
                     st.download_button("⬇️ PNG Grafik", buf_img, "grafik_edited.png", "image/png")
                 
                 with col2:
-                    config_json = json.dumps(st.session_state.data_config, indent=4, ensure_ascii=False)
-                    buf_json = io.BytesIO(config_json.encode('utf-8'))
-                    st.download_button(
-                        "⬇️ Config JSON (Simpan Edit)",
-                        buf_json,
-                        f"edit_config_{uploaded_file.name}.json",
-                        "application/json"
-                    )
-                
-                with col3:
+                    # Download data asli (CSV)
                     buf_csv = io.BytesIO()
                     df.to_csv(buf_csv, index=False)
                     buf_csv.seek(0)
-                    st.download_button("⬇️ Data Asli CSV", buf_csv, "data_asli.csv", "text/csv")
+                    st.download_button("⬇️ Data Asli (CSV)", buf_csv, "data_asli.csv", "text/csv")
+                
+                with col3:
+                    # Download data edited (XLSX dengan config)
+                    config_for_save = []
+                    for cat_str, vals in st.session_state.data_config.items():
+                        config_for_save.append({
+                            'Group': cat_str,
+                            'q1': vals['q1'],
+                            'q3': vals['q3'],
+                            'med': vals['med'],
+                            'whislo': vals['whislo'],
+                            'whishi': vals['whishi'],
+                            'width': vals['width']
+                        })
+                    config_df_save = pd.DataFrame(config_for_save)
+                    
+                    buf_xlsx = io.BytesIO()
+                    with pd.ExcelWriter(buf_xlsx, engine='openpyxl') as writer:
+                        df.to_excel(writer, sheet_name='DataPoints', index=False)
+                        config_df_save.to_excel(writer, sheet_name='BoxplotConfig', index=False)
+                    buf_xlsx.seek(0)
+                    st.download_button(
+                        "⬇️ Data Edited (XLSX)",
+                        buf_xlsx,
+                        "data_dengan_edit_boxplot.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
                 
                 st.success("""
-                **Cara melanjutkan edit kapan saja:**  
-                1. Download **Config JSON** (ini "tanda" editan kotak kamu).  
-                2. Nanti buka lagi → upload data yang sama → upload Config JSON tadi.  
-                → Kotak yang pernah diedit akan **persis sama** seperti waktu kamu edit terakhir.  
-                → Kotak yang tidak diedit tetap dari data asli.  
-                → Titik orange, garis, dll tetap seperti grafik aslinya.  
-                → Label dengan `*` = kotak telah diedit manual.
+                **Cara kerja persisten edit kotak:**  
+                1. Edit kotak sesukamu → bentuk grafik jadi A.  
+                2. Download **Data Edited (XLSX)** → ini file B (berisi data asli + config edit kotak).  
+                3. Nanti upload file B lagi → grafik **otomatis berbentuk A** (kotak persis seperti editan terakhir).  
+                → Titik orange, garis, dll tetap dari data asli (tidak berubah).  
+                → Label `*` = kotak diedit manual.  
+                → Jika upload CSV atau XLSX tanpa sheet 'BoxplotConfig' → mulai dari bentuk asli.
                 """)
                 
     except Exception as e:
