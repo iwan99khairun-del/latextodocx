@@ -17,7 +17,7 @@ def natural_sort_key(s):
     return s
 
 # --- 1. UPLOAD FILE ---
-uploaded_file = st.file_uploader("Upload File Excel/CSV", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload File Excel/CSV (Data Asli atau Data Edit)", type=["xlsx", "csv"])
 
 if uploaded_file:
     try:
@@ -34,7 +34,7 @@ if uploaded_file:
         is_edited_file = 'Is_Edited_Summary' in df.columns
 
         if is_edited_file:
-            st.success("✅ Menggunakan data hasil edit (Titik scatter tidak tersedia di file ringkasan).")
+            st.success("✅ Menggunakan data hasil edit. Titik scatter akan disimulasikan.")
             x_col = df['Original_X_Label'].iloc[0]
             y_col = df['Original_Y_Label'].iloc[0]
             cats = df['Group_Name'].tolist()
@@ -61,7 +61,7 @@ if uploaded_file:
             if 'data_config' not in st.session_state:
                 st.session_state['data_config'] = {}
             
-            # INISIALISASI (Fix Error 'width')
+            # INISIALISASI DATA CONFIG
             for _, row in df.iterrows():
                 cat_str = str(row['Group_Name']) if is_edited_file else str(row[x_col])
                 if cat_str not in st.session_state['data_config'] or 'width' not in st.session_state['data_config'][cat_str]:
@@ -86,11 +86,10 @@ if uploaded_file:
                 with st.expander("1️⃣ Pengaturan Global", expanded=True):
                     fig_w = st.slider("Lebar Gambar", 3.0, 15.0, 6.0)
                     fig_h = st.slider("Tinggi Gambar", 3.0, 10.0, 5.0)
-                    jitter_val = st.slider("Jitter (Sebaran Titik)", 0.0, 0.4, 0.12)
-                    
-                    # FITUR BARU: Warna Titik
-                    dot_color = st.color_picker("Warna Titik Bulatan", "#FFA500") 
-                    dot_size = st.slider("Ukuran Titik", 2.0, 15.0, 7.0)
+                    jitter_val = st.slider("Jitter (Sebaran Titik)", 0.0, 0.4, 0.15)
+                    dot_color = st.color_picker("Warna Titik", "#FFA500") 
+                    dot_size = st.slider("Ukuran Titik", 2.0, 15.0, 8.0)
+                    dot_opacity = st.slider("Transparansi Titik", 0.1, 1.0, 0.6)
                     
                 st.subheader("2️⃣ Edit Kotak")
                 pilih_group = st.selectbox("Pilih Group:", options=[str(c) for c in cats])
@@ -124,19 +123,32 @@ if uploaded_file:
                     })
                     list_widths.append(c['width'])
 
-                # Boxplot dengan Median Merah agar jelas
+                # Render Boxplot (Z-order rendah agar di bawah titik)
                 ax.bxp(bxp_stats, showfliers=False, widths=list_widths, patch_artist=True,
-                       boxprops=dict(facecolor='#E6E6E6', edgecolor='#595959', linewidth=1),
-                       medianprops=dict(color='red', linewidth=2))
+                       boxprops=dict(facecolor='#E6E6E6', edgecolor='#595959', linewidth=1, zorder=2),
+                       medianprops=dict(color='red', linewidth=2.5, zorder=3))
 
-                # TITIK SCATTER (Hanya jika upload data mentah)
+                # LOGIKA TITIK (SCATTER)
+                cat_map = {str(c): i+1 for i, c in enumerate(cats)}
+                
                 if not is_edited_file:
-                    cat_map = {str(c): i+1 for i, c in enumerate(cats)}
+                    # DATA ASLI: Gambar titik nyata
                     df['x_idx'] = df[x_col].astype(str).apply(lambda x: cat_map[x])
                     np.random.seed(42)
                     noise = np.random.uniform(-jitter_val, jitter_val, size=len(df))
                     ax.scatter(df['x_idx'] + noise, df[y_col], s=dot_size**1.5, 
-                               c=dot_color, alpha=0.6, zorder=3, edgecolor='black', linewidth=0.5)
+                               c=dot_color, alpha=dot_opacity, zorder=5, edgecolor='black', linewidth=0.3)
+                else:
+                    # DATA EDIT: Gambar titik simulasi agar grafik tidak kosong
+                    st.info("💡 Menampilkan titik simulasi (random jitter) berdasarkan rentang Q1-Q3.")
+                    np.random.seed(42)
+                    for i, cat in enumerate(cats):
+                        c_str = str(cat)
+                        conf = st.session_state['data_config'][c_str]
+                        # Buat 10 titik acak di sekitar median
+                        sim_y = np.random.uniform(conf['q1'], conf['q3'], size=10)
+                        sim_x = np.full(10, i + 1) + np.random.uniform(-jitter_val, jitter_val, size=10)
+                        ax.scatter(sim_x, sim_y, s=dot_size**1.5, c=dot_color, alpha=dot_opacity, zorder=5)
 
                 ax.set_xlabel(x_col, fontweight='bold')
                 ax.set_ylabel(y_col, fontweight='bold')
