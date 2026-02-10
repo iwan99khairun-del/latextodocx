@@ -17,7 +17,7 @@ def natural_sort_key(s):
     return s
 
 # --- 1. UPLOAD FILE ---
-uploaded_file = st.file_uploader("Upload File Excel/CSV (Data Asli atau Data Edit)", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload File (Data Asli atau Data Edit)", type=["xlsx", "csv"])
 
 if uploaded_file:
     try:
@@ -34,7 +34,7 @@ if uploaded_file:
         is_edited_file = 'Is_Edited_Summary' in df.columns
 
         if is_edited_file:
-            st.success("✅ Menggunakan data hasil edit. Titik scatter akan disimulasikan.")
+            st.success("✅ File edit terdeteksi. Titik (bulatan) akan mengikuti angka yang Anda masukkan.")
             x_col = df['Original_X_Label'].iloc[0]
             y_col = df['Original_Y_Label'].iloc[0]
             cats = df['Group_Name'].tolist()
@@ -61,7 +61,7 @@ if uploaded_file:
             if 'data_config' not in st.session_state:
                 st.session_state['data_config'] = {}
             
-            # INISIALISASI DATA CONFIG
+            # INISIALISASI SESSION STATE
             for _, row in df.iterrows():
                 cat_str = str(row['Group_Name']) if is_edited_file else str(row[x_col])
                 if cat_str not in st.session_state['data_config'] or 'width' not in st.session_state['data_config'][cat_str]:
@@ -89,20 +89,21 @@ if uploaded_file:
                     jitter_val = st.slider("Jitter (Sebaran Titik)", 0.0, 0.4, 0.15)
                     dot_color = st.color_picker("Warna Titik", "#FFA500") 
                     dot_size = st.slider("Ukuran Titik", 2.0, 15.0, 8.0)
-                    dot_opacity = st.slider("Transparansi Titik", 0.1, 1.0, 0.6)
                     
-                st.subheader("2️⃣ Edit Kotak")
+                st.subheader("2️⃣ Edit Kotak & Data")
                 pilih_group = st.selectbox("Pilih Group:", options=[str(c) for c in cats])
                 if pilih_group:
                     conf = st.session_state['data_config'][pilih_group]
                     new_w = st.slider(f"Lebar Kotak", 0.1, 1.0, float(conf['width']))
+                    
                     c_h1, c_h2 = st.columns(2)
                     with c_h1:
-                        new_q3 = st.number_input("Atas (Q3)", value=float(conf['q3']), format="%.4f")
-                        new_q1 = st.number_input("Bawah (Q1)", value=float(conf['q1']), format="%.4f")
+                        new_q3 = st.number_input("Atas (Q3)", value=float(conf['q3']), format="%.4f", step=0.001)
+                        new_q1 = st.number_input("Bawah (Q1)", value=float(conf['q1']), format="%.4f", step=0.001)
                     with c_h2:
-                        new_med = st.number_input("Tengah (Median)", value=float(conf['med']), format="%.4f")
+                        new_med = st.number_input("Tengah (Median)", value=float(conf['med']), format="%.4f", step=0.001)
                     
+                    # Simpan Perubahan
                     st.session_state['data_config'][pilih_group].update({
                         'width': new_w, 'q3': new_q3, 'q1': new_q1, 'med': new_med
                     })
@@ -123,51 +124,51 @@ if uploaded_file:
                     })
                     list_widths.append(c['width'])
 
-                # Render Boxplot (Z-order rendah agar di bawah titik)
+                # Gambar Boxplot
                 ax.bxp(bxp_stats, showfliers=False, widths=list_widths, patch_artist=True,
-                       boxprops=dict(facecolor='#E6E6E6', edgecolor='#595959', linewidth=1, zorder=2),
-                       medianprops=dict(color='red', linewidth=2.5, zorder=3))
+                       boxprops=dict(facecolor='#F0F0F0', edgecolor='#595959', linewidth=1, zorder=2),
+                       medianprops=dict(color='red', linewidth=2, zorder=3))
 
-                # LOGIKA TITIK (SCATTER)
+                # GAMBAR TITIK (SCATTER) - HARUS SELALU ADA
                 cat_map = {str(c): i+1 for i, c in enumerate(cats)}
-                
-                if not is_edited_file:
-                    # DATA ASLI: Gambar titik nyata
-                    df['x_idx'] = df[x_col].astype(str).apply(lambda x: cat_map[x])
-                    np.random.seed(42)
-                    noise = np.random.uniform(-jitter_val, jitter_val, size=len(df))
-                    ax.scatter(df['x_idx'] + noise, df[y_col], s=dot_size**1.5, 
-                               c=dot_color, alpha=dot_opacity, zorder=5, edgecolor='black', linewidth=0.3)
-                else:
-                    # DATA EDIT: Gambar titik simulasi agar grafik tidak kosong
-                    st.info("💡 Menampilkan titik simulasi (random jitter) berdasarkan rentang Q1-Q3.")
-                    np.random.seed(42)
-                    for i, cat in enumerate(cats):
-                        c_str = str(cat)
-                        conf = st.session_state['data_config'][c_str]
-                        # Buat 10 titik acak di sekitar median
-                        sim_y = np.random.uniform(conf['q1'], conf['q3'], size=10)
-                        sim_x = np.full(10, i + 1) + np.random.uniform(-jitter_val, jitter_val, size=10)
-                        ax.scatter(sim_x, sim_y, s=dot_size**1.5, c=dot_color, alpha=dot_opacity, zorder=5)
+                np.random.seed(42)
+
+                for i, cat in enumerate(cats):
+                    c_str = str(cat)
+                    conf = st.session_state['data_config'][c_str]
+                    
+                    if not is_edited_file:
+                        # Jika pakai Data Asli: Ambil titik dari dataframe asli
+                        group_data = df[df[x_col].astype(str) == c_str][y_col]
+                        x_points = np.full(len(group_data), i + 1) + np.random.uniform(-jitter_val, jitter_val, size=len(group_data))
+                        y_points = group_data
+                    else:
+                        # Jika pakai Data Edit: Bangun ulang titik agar sesuai grafik (Q1 sampai Q3)
+                        # Kita buat 15 titik representatif agar grafik tetap terlihat "hidup"
+                        x_points = np.full(15, i + 1) + np.random.uniform(-jitter_val, jitter_val, size=15)
+                        y_points = np.linspace(conf['q1'], conf['q3'], 15)
+                    
+                    ax.scatter(x_points, y_points, s=dot_size**1.5, c=dot_color, alpha=0.6, 
+                               zorder=5, edgecolor='black', linewidth=0.3)
 
                 ax.set_xlabel(x_col, fontweight='bold')
                 ax.set_ylabel(y_col, fontweight='bold')
                 st.pyplot(fig)
 
-                # DOWNLOAD
+                # --- DOWNLOAD ---
                 st.write("---")
                 d_c1, d_c2 = st.columns(2)
                 with d_c1:
                     buf = io.BytesIO()
                     fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-                    st.download_button("⬇️ Download Gambar", buf.getvalue(), "plot.png", "image/png")
+                    st.download_button("⬇️ Download PNG", buf.getvalue(), "plot.png", "image/png")
                 with d_c2:
                     export_rows = []
                     for cat_name in cats:
                         row = {'Is_Edited_Summary': True, 'Original_X_Label': x_col, 'Original_Y_Label': y_col,
                                'Group_Name': str(cat_name), **st.session_state['data_config'][str(cat_name)]}
                         export_rows.append(row)
-                    st.download_button("⬇️ Download Data Edit (.csv)", pd.DataFrame(export_rows).to_csv(index=False), "data_edit.csv", "text/csv")
+                    st.download_button("⬇️ Download CSV", pd.DataFrame(export_rows).to_csv(index=False), "data_edit.csv", "text/csv")
 
     except Exception as e:
-        st.error(f"Eror: {e}")
+        st.error(f"Gagal memproses data: {e}")
